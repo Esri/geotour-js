@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>Simple Map Tour</title>
+
+  <link rel="stylesheet" href="https://js.arcgis.com/4.0/esri/css/main.css">
+  
+  <style>
+    html, body, #viewDiv {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+    }
+
+    #instructions {
+      float: right;
+      padding: 0.9em;
+      background-color: #DDD;
+      text-align: center;
+      border-radius: 5px;
+      z-index: 1000;
+      font-family: Sans-Serif;
+      pointer-events: none;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="instructions">Loading…</div>
+  <div id="viewDiv"></div>
+</body>
+
+<script type="text/javascript">
+var package_path = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
+var dojoConfig = {
+  //The location.pathname.replace() logic below may look confusing but all its doing is
+  // enabling us to load the api from a CDN and load local modules from the correct location.
+  packages: [{
+      name: "map-tour",
+      location: package_path + '/src/js'
+  }]
+};
+</script>
+
+<script src="https://js.arcgis.com/4.0/"></script>
+
+<script type="text/javascript">
+require([
+  "esri/Map",
+  "esri/views/MapView",
+  "esri/layers/TileLayer",
+  "map-tour/tour",
+  "dojo/domReady!"
+], function(Map, MapView, TileLayer, MapTour) {
+
+  // Create the map.
+  var map = new Map({
+    basemap: {
+      baseLayers: [new TileLayer({
+        url: "https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Base/MapServer"
+      })]
+    }
+  });
+
+  // And the view.
+  var view = new MapView({
+    container: "viewDiv",
+    map: map,
+    center: [-100.68, 45.52], // lon, lat
+    zoom: 4
+  });
+
+  // Move the instructions DIV to the MapView UI.
+  view.ui.add(document.getElementById("instructions"), "top-right");
+
+  var tour = new MapTour(view);
+
+  tour.watch("ready", function () {
+    view.goTo(tour.extent).then(function () {
+      tour.animate();
+    });
+  });
+});
+</script>
+</html>

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>3D Map Tour</title>
+
+  <link rel="stylesheet" href="https://js.arcgis.com/4.0/esri/css/main.css">
+  
+  <style>
+    html, body, #viewDiv {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+    }
+
+    #instructions {
+      float: right;
+      padding: 0.9em;
+      background-color: #DDD;
+      text-align: center;
+      border-radius: 5px;
+      z-index: 1000;
+      font-family: Sans-Serif;
+      pointer-events: none;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="instructions">Loading…</div>
+  <div id="viewDiv"></div>
+</body>
+
+<script type="text/javascript">
+  var package_path = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
+  var dojoConfig = {
+    //The location.pathname.replace() logic below may look confusing but all its doing is
+    // enabling us to load the api from a CDN and load local modules from the correct location.
+    packages: [{
+        name: "map-tour",
+        location: package_path + '/src/js'
+    }]
+  };
+</script>
+
+<script src="https://js.arcgis.com/4.0/"></script>
+<script src="util/js/esri-view-ui-visibility.js"></script>
+
+<script type="text/javascript">
+require([
+  "esri/Map",
+  "esri/views/SceneView",
+  "esri/layers/TileLayer",
+  "map-tour/tour",
+  "esri/core/watchUtils",
+  "dojo/domReady!"
+], function(Map, SceneView, TileLayer, MapTour, watchUtils) {
+
+
+  // Create the map.
+  var map = new Map({
+    basemap: {
+      baseLayers: [new TileLayer({
+        url: "https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Base/MapServer"
+      })]
+    }
+  });
+
+  // And the view.
+  var view = new SceneView({
+    container: "viewDiv",
+    map: map,
+    center: [-100.68, 45.52], // lon, lat
+    zoom: 4
+  });
+
+  // Create a global - easier for debugging in the console.
+  mapView = view;
+
+  // Move the instructions DIV to the SceneView UI.
+  view.ui.add(document.getElementById("instructions"), "top-right");
+
+  var tour = new MapTour(view);
+
+  tour.watch("ready", function () {
+    // Zoom Map
+    view.goTo(tour.extent);
+
+    // Update the UI to say we're ready to animate.
+    document.getElementById("instructions").innerHTML = "Click the map to animate";
+
+    var clickEvent = view.on("click", handleClick);
+
+    function handleClick() {
+      // Disable the click event.
+      clickEvent.remove();
+
+      // Hide the UI and mouse
+      view.ui.hide();
+      document.body.style.cursor = "none";
+
+      // The tour will do this automatically, but we have a pause here and want to force the display to
+      // be cleared before the pause happens.
+      tour.clearDisplay();
+
+      // Delay the animation very slightly after clearing the UI
+      // This allows us to cut appropriately in Video Editing software if recording
+      // the animation... Likewise, delay re-adding the UI when done.
+      window.setTimeout(startAnimation, 750);
+    };
+
+    function startAnimation() { 
+      var tourAnimation = tour.animate();
+
+      var cancelEvent = view.on("click", function () {
+        cancelEvent.remove();
+        tourAnimation.cancel();
+        restoreUI();
+      });
+
+      tourAnimation.then(function () {
+        // Pause slightly before redisplaying the UI.
+        window.setTimeout(function () {
+          cancelEvent.remove();
+          restoreUI();
+        }, 750);
+
+      }, function (err) {
+        // Don't show an error if we got here because the user cancelled the animation.
+        if (err.name !== "CancelError") {
+          console.log("Error during animation: " + err);
+        }
+      });
+
+      function restoreUI() {
+        view.ui.show();
+        document.body.style.cursor = "default";
+
+        clickEvent = view.on("click", handleClick);
+      }
+
+    }
+  });
+
+  tour.watch("loadError", function () {
+    // Update the UI to say we're ready to animate.
+    console.log("Tour error: " + tour.loadError);
+    alert("There was an error loading the tour!");
+    document.getElementById("instructions").innerHTML = "Oops. There was an error loading the tour.";
+  });
+});
+</script>
+</html>
