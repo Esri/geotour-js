@@ -108,11 +108,7 @@ require([
       // Delay the animation very slightly after clearing the UI
       // This allows us to cut appropriately in Video Editing software if recording
       // the animation... Likewise, delay re-adding the UI when done.
-      window.setTimeout(startAnimation, 750);
-    };
-
-    function startAnimation() { 
-      var tourAnimation = tour.animate();
+      var tourAnimation = tour.animateWithDelay(750);
 
       var cancelEvent = view.on("click", function () {
         cancelEvent.remove();

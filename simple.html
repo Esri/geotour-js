@@ -13,23 +13,10 @@
       margin: 0;
       height: 100%;
     }
-
-    #instructions {
-      float: right;
-      padding: 0.9em;
-      background-color: #DDD;
-      text-align: center;
-      border-radius: 5px;
-      z-index: 1000;
-      font-family: Sans-Serif;
-      pointer-events: none;
-      opacity: 0.6;
-    }
   </style>
 </head>
 
 <body>
-  <div id="instructions">Loading…</div>
   <div id="viewDiv"></div>
 </body>
 
@@ -72,9 +59,6 @@ require([
     center: [-100.68, 45.52], // lon, lat
     zoom: 4
   });
-
-  // Move the instructions DIV to the MapView UI.
-  view.ui.add(document.getElementById("instructions"), "top-right");
 
   var tour = new MapTour(view);
 

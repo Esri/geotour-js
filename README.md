@@ -145,4 +145,3 @@ If you are a masochist, you can also provide a full configuration object to the 
 | ------------ | ----------- |
 | `defaultConfig()` | Return a default configuration object.|
 | `getConfig()` | Return a default configuration object populated with any relevant URL parameters for the current page. |
-

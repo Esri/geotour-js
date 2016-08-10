@@ -53,6 +53,7 @@ function (GraphicsLayer,
           symbol: this.tourConfig.symbols.tour
         })
       });
+
       this.stopsGraphicsLayer = new GraphicsLayer({
         renderer: new SimpleRenderer({
           symbol: this.tourConfig.symbols.stops
@@ -65,13 +66,13 @@ function (GraphicsLayer,
       if (this.tourConfig.spatialReference) {
         // User can override the spatialReference directly, so we don't have
         // to wait for the view to read it.
-        loadTour.bind(this)();
+        loadTour(this);
       } else {
         // Otherwise, wait for the view to load so we can use its Spatial Reference.
         watchUtils.whenTrueOnce(this.view, "ready", function() {
           this.tourConfig.spatialReference = this.view.spatialReference;
-          loadTour.bind(this)();
-        }.bind(this));        
+          loadTour(this);
+        }.bind(this));
       }
 
       if (this.tourConfig.autoStart) {
@@ -83,11 +84,15 @@ function (GraphicsLayer,
         }.bind(this));
       }
     },
-  	animate: animateTour,
-    animateWithDelay: function(delay) {
-      window.setTimeout(animateTour.bind(this), delay || 500);
+  	animate: function() {
+      return animateTour(this);
     },
-    clearDisplay: clearTourGraphics
+    animateWithDelay: function(delay) {
+      return animateTour(this, delay || 500);
+    },
+    clearDisplay: function() {
+      clearTourGraphics(this);
+    }
 	});
 
   // Provide a Class Level method to read default config.
@@ -96,222 +101,118 @@ function (GraphicsLayer,
 
   return tourClass;
 
-  function clearTourGraphics() {
-    this.hopsGraphicsLayer.removeAll();
-    this.stopsGraphicsLayer.removeAll();
-  }
 
-  function loadTour() {
-    this.view.map.addMany([
-      this.hopsGraphicsLayer,
-      this.stopsGraphicsLayer
+  /// TOUR DATA LOADING
+  function loadTour(tour) {
+    // Make sure we're cleared up
+    tour.ready = false;
+    tour.extent = undefined;
+    tour.loadError = undefined;
+
+    tour.view.map.addMany([
+      tour.hopsGraphicsLayer,
+      tour.stopsGraphicsLayer
     ]);
 
+    var queryPromises = getQueryPromises(tour.tourConfig);
+    handleQueryPromises(tour, queryPromises);
+  }
+
+  function getQueryPromises(config) {
     // Create query task to load the stops
     var stopQueryTask = new QueryTask({
-      url: this.tourConfig.data.stopServiceURL
+      url: config.data.stopServiceURL
     });
 
     // Make sure we get back the attributes we need, and order appropriately
     var stopQuery = new Query({
       returnGeometry: true,
-      outFields: [this.tourConfig.data.stopNameField, this.tourConfig.data.stopSequenceField],
+      outFields: [config.data.stopNameField, config.data.stopSequenceField],
       where: "1=1",
-      orderByFields: [this.tourConfig.data.stopSequenceField],
-      outSpatialReference: this.tourConfig.spatialReference
+      orderByFields: [config.data.stopSequenceField],
+      outSpatialReference: config.spatialReference
     });
 
     // Perform query for stops
-    var queries = [stopQueryTask.execute(stopQuery)];
+    var promises = [stopQueryTask.execute(stopQuery)];
 
     // If we were given a feature service of Route Directions (from saving an ArcGIS Online Directions result),
     // then also load that.
-    if (this.tourConfig.useActualRoute) {
+    if (config.useActualRoute) {
       var trackQueryTask = new QueryTask({
-        url: this.tourConfig.data.trackServiceURL
+        url: config.data.trackServiceURL
       });
 
       var trackQuery = new Query({
         returnGeometry: true,
         where: "1=1",
-        orderByFields: [this.tourConfig.data.trackSequenceField],
-        outSpatialReference: this.tourConfig.spatialReference
+        orderByFields: [config.data.trackSequenceField],
+        outSpatialReference: config.spatialReference
       });
 
-      queries.push(trackQueryTask.execute(trackQuery));
+      promises.push(trackQueryTask.execute(trackQuery));
     }
 
-    // When stops and directions (if appropriate) have been loaded, parse the data and get ready to animate.
-	  all(queries).then(function(results) {
-      var stopFeatures = results[0].features;
-      if (stopFeatures.length === 0) {
-        loadDeferred.reject("No stops were returned to show a map between!");
-        return;
-      } else {
-        var sampleFeature = stopFeatures[0],
-            looksOk = true;
-        if (!sampleFeature.attributes.hasOwnProperty(this.tourConfig.data.stopNameField)) {
-          loadDeferred.reject("The data returned for the stops doesn't seem to have a " + this.tourConfig.data.stopNameField + " field!");
-          looksOk = false;
-        }
-        if (!sampleFeature.attributes.hasOwnProperty(this.tourConfig.data.stopSequenceField)) {
-          loadDeferred.reject("The data returned for the stops doesn't seem to have a " + this.tourConfig.data.stopSequenceField + " field!");
-          looksOk = false;
-        }
+    return promises;
+  }
 
-        if (!looksOk) return;
+  function handleQueryPromises(tour, queryPromises) {
+    // When stops and directions (if appropriate) have been loaded, parse the data and get ready to animate.
+    all(queryPromises).then(function(results) {
+      var stopFeatures = results[0].features;
+
+      if (!validateStops(stopFeatures, tour.tourConfig)) {
+        return;
       }
 
       var trackGeoms = results.length > 1 ? getTrackGeoms(results[1].features) : undefined;
 
       // Parse the data, and prepare the data for animation
-      this.hops = parseHops.bind(this)(stopFeatures, trackGeoms);
+      tour.hops = parseHops(tour, stopFeatures, trackGeoms);
 
-      this.hopAnimationDuration = this.tourConfig.animation.duration / (Math.max(1, this.hops.length));
+      // How long should each hop take?
+      tour.hopAnimationDuration = tour.tourConfig.animation.duration / (Math.max(1, tour.hops.length));
 
-      this.extent = geometryEngine.union(this.hops.map(function(hop) {
+      // Where is the tour?
+      tour.extent = geometryEngine.union(tour.hops.map(function(hop) {
         return hop.line.extent;
       })).extent;
 
-      this.ready = true;
+      // OK. We're ready to animate.
+      tour.ready = true;
+    }, function (err) {
+      console.error("Something went wrong querying the stops or routes services. Check your URL parameters.\n\nMore details in the browser console.");
+      console.error(err);
 
-      return;
-	  }.bind(this), function (err) {
-	    console.error("Something went wrong querying the stops or routes services. Check your URL parameters.\n\nMore details in the browser console.");
-	    console.error(err);
-
-      this.loadError = err;
-
-	    return;
-	  });
+      tour.loadError = err;
+    });
   }
 
-  function animateTour() {
-    var deferred = new Deferred();
+  function validateStops(stopFeatures, config) {
+    var looksOk = true;
 
-    // Clear any existing routes
-    this.clearDisplay();
-
-    // Set up some graphics and geometries to work with.
-    var completedHopsLine, completedHopsGraphic, currentHopLine, currentHopGraphic;
-
-    watchUtils.whenTrueOnce(this.view, "ready", function() {
-      completedHopsLine = new Polyline({
-        spatialReference: this.tourConfig.spatialReference
-      });
-      completedHopsGraphic = new Graphic({
-        geometry: completedHopsLine
-      });
-      currentHopLine = new Polyline({
-        spatialReference: this.tourConfig.spatialReference
-      });
-      currentHopGraphic = new Graphic({
-        geometry: currentHopLine
-      });
-
-      // And start the animation
-      window.requestAnimationFrame(updateAnimation.bind(this));
-    }.bind(this));
-
-    var start,
-        currentIndex = 0;
-
-    return deferred;
-
-    function updateAnimation(timeStamp) {
-    	if (deferred.isCanceled()) {
-    		deferred.reject("Tour cancelled by user.");
-    		return;
-    	}
-
-      // Let's figure out where we should be in the animation for this timestamp.
-      var currentHopInfo = this.hops[currentIndex];
-
-      if (!start) {
-        // If we just started a hop, we remember this timestamp.
-        start = timeStamp;
-        if (currentIndex == 0) {
-          // For the first hop only, also show the origin.
-          showStop(currentHopInfo.origin, this.stopsGraphicsLayer, this.tourConfig);
-        }
+    // Do some input validation
+    if (stopFeatures.length === 0) {
+      console.error("No stops were returned to show a map between!");
+      looksOk = false;
+    } else {
+      var sampleFeature = stopFeatures[0];
+      if (!sampleFeature.attributes.hasOwnProperty(config.data.stopNameField)) {
+        console.error("The data returned for the stops doesn't seem to have a " + config.data.stopNameField + " field!");
+        looksOk = false;
       }
-
-      // Get as much line as we need for as far through this hop's animation as we are
-      var hopProgress = Math.min(1, (timeStamp - start) / (this.hopAnimationDuration * 1000)),
-          subLine = getSubline(currentHopInfo.geodesicLine, hopProgress);
-
-      // Update the map. We need to create a new Graphic. Just updating the geometry doesn't do it.
-      this.hopsGraphicsLayer.remove(currentHopGraphic);
-      currentHopGraphic = new Graphic({ geometry: subLine })
-      this.hopsGraphicsLayer.add(currentHopGraphic);
-
-      // If we reached the end of a hop, display the stop that's at the end of it and move on to the next hop.
-      if (hopProgress == 1) {
-        // First update the overall "completed hops" polyline.
-        for (var p=0; p < subLine.paths.length; p++) {
-          completedHopsLine.addPath(subLine.paths[p]);
-        }
-
-        // And update the map to reflect this. We now have one line on the map
-        this.hopsGraphicsLayer.remove(currentHopGraphic);
-        this.hopsGraphicsLayer.remove(completedHopsGraphic);
-        completedHopsGraphic = new Graphic({ geometry: completedHopsLine });
-        this.hopsGraphicsLayer.add(completedHopsGraphic);
-
-        // Show the stop we just reached.
-        showStop(currentHopInfo.destination, this.stopsGraphicsLayer, this.tourConfig);
-
-        // Move on to the next hop and reset the timing info
-        currentIndex += 1;
-        start = undefined;
-
-        deferred.progress({
-        	currentHop: currentIndex,
-        	totalHops: this.hops.length
-        });
-      }
-
-      // Check if we're done. If we are, good, resolve the deferred and get outta here. Otherwise, repeat when the next animation opportunity comes up.
-      if (currentIndex < this.hops.length) {
-        window.requestAnimationFrame(updateAnimation.bind(this)); 
-      } else {
-        deferred.resolve();
+      if (!sampleFeature.attributes.hasOwnProperty(config.data.stopSequenceField)) {
+        console.error("The data returned for the stops doesn't seem to have a " + config.data.stopSequenceField + " field!");
+        looksOk = false;
       }
     }
+
+    return looksOk;
   }
 
-  /// Data Visualization
-  function showStop(stop, stopsGraphicsLayer, tourConfig) {
-    stopsGraphicsLayer.add(stop);
-    stopsGraphicsLayer.add(labelForStop(stop, tourConfig));
-  }
 
-  function labelForStop(stop, tourConfig) {
-    var yOffset = stop.attributes.__label_yOffset || 0;
-    var alignment = stop.attributes.__label_alignment || "center";
 
-    var labelGraphic = new Graphic({
-      geometry: stop.geometry,
-      symbol: new TextSymbol({
-        color: "white",
-        haloColor: "black",
-        haloSize: "3px",
-        text: stop.attributes[tourConfig.data.stopNameField],
-        xoffset: 0,
-        yoffset: yOffset,
-        horizontalAlignment: alignment,
-        font: {  // autocast as esri/symbols/Font
-          size: 12,
-          family: "sans-serif",
-          weight: "light"
-        }
-      })
-    });
-
-    return labelGraphic;
-  }
-
-  /// Track Parsing
+  /// TOUR DATA PARSING
   function getTrackGeoms(allRouteGraphics) {
     var trackHops = [],
         currentHop = [],
@@ -346,13 +247,13 @@ function (GraphicsLayer,
   }
 
   /// Stop and Track Parsing
-  function parseHops(stopFeatures, trackFeatures) {
+  function parseHops(tour, stopFeatures, trackFeatures) {
     var hops = [];
     var hopCount = Math.max(stopFeatures.length-1, 1);
-    var hopAnimationDuration = this.tourConfig.animation.duration / hopCount,
-        framesPerHop = hopAnimationDuration * this.tourConfig.animation.maxFPS;
+    var hopAnimationDuration = tour.tourConfig.animation.duration / hopCount,
+        framesPerHop = hopAnimationDuration * tour.tourConfig.animation.maxFPS;
 
-    var labelConfig = this.tourConfig.labelPositions;
+    var labelConfig = tour.tourConfig.labelPositions;
 
     var previousStop = undefined;
     for (var i=0; i < stopFeatures.length; i++) {
@@ -372,13 +273,13 @@ function (GraphicsLayer,
 
         var hopLine, geodesicHopLine;
 
-        if (this.tourConfig.useActualRoute) {
+        if (tour.tourConfig.useActualRoute) {
           hopLine = trackFeatures[i-1];
           geodesicHopLine = hopLine;
         } else {
           hopLine = new Polyline({
             paths: [[prevPoint.x, prevPoint.y], [currPoint.x, currPoint.y]],
-            spatialReference: this.view.spatialReference
+            spatialReference: tour.view.spatialReference
           });
           
           var hopLength = geometryEngine.geodesicLength(hopLine, "miles"),
@@ -401,6 +302,143 @@ function (GraphicsLayer,
 
     return hops;
   }
+
+
+  /// TOUR ANIMATION
+  function animateTour(tour, delay) {
+    var deferred = new Deferred();
+
+    // Clear any existing routes
+    tour.clearDisplay();
+
+    // Set up some graphics and geometries to work with.
+    var start, currentIndex = 0;
+    var completedHopsLine, completedHopsGraphic, currentHopLine, currentHopGraphic;
+
+    window.setTimeout(function() {
+      watchUtils.whenTrueOnce(tour, "ready", function () {
+        watchUtils.whenTrueOnce(tour.view, "ready", function() {
+          // Waiting here is a little redundant but safe in case anyone calls animate() before we're ready.
+          completedHopsLine = new Polyline({
+            spatialReference: tour.tourConfig.spatialReference
+          });
+          completedHopsGraphic = new Graphic({
+            geometry: completedHopsLine
+          });
+          currentHopLine = new Polyline({
+            spatialReference: tour.tourConfig.spatialReference
+          });
+          currentHopGraphic = new Graphic({
+            geometry: currentHopLine
+          });
+
+          // And start the animation
+          window.requestAnimationFrame(updateAnimation);
+        });
+      });
+    }, delay || 0);
+
+    return deferred;
+
+    function updateAnimation(timeStamp) {
+    	if (deferred.isCanceled()) {
+    		deferred.reject("Tour cancelled by user.");
+    		return;
+    	}
+
+      // Let's figure out where we should be in the animation for this timestamp.
+      var currentHopInfo = tour.hops[currentIndex];
+
+      if (!start) {
+        // If we just started a hop, we remember this timestamp.
+        start = timeStamp;
+        if (currentIndex == 0) {
+          // For the first hop only, also show the origin.
+          showStop(currentHopInfo.origin, tour.stopsGraphicsLayer, tour.tourConfig);
+        }
+      }
+
+      // Get as much line as we need for as far through this hop's animation as we are
+      var hopProgress = Math.min(1, (timeStamp - start) / (tour.hopAnimationDuration * 1000)),
+          subLine = getSubline(currentHopInfo.geodesicLine, hopProgress);
+
+      // Update the map. We need to create a new Graphic. Just updating the geometry doesn't do it.
+      tour.hopsGraphicsLayer.remove(currentHopGraphic);
+      currentHopGraphic = new Graphic({ geometry: subLine })
+      tour.hopsGraphicsLayer.add(currentHopGraphic);
+
+      // If we reached the end of a hop, display the stop that's at the end of it and move on to the next hop.
+      if (hopProgress == 1) {
+        // First update the overall "completed hops" polyline.
+        for (var p=0; p < subLine.paths.length; p++) {
+          completedHopsLine.addPath(subLine.paths[p]);
+        }
+
+        // And update the map to reflect this. We now have one line on the map
+        tour.hopsGraphicsLayer.remove(currentHopGraphic);
+        tour.hopsGraphicsLayer.remove(completedHopsGraphic);
+        completedHopsGraphic = new Graphic({ geometry: completedHopsLine });
+        tour.hopsGraphicsLayer.add(completedHopsGraphic);
+
+        // Show the stop we just reached.
+        showStop(currentHopInfo.destination, tour.stopsGraphicsLayer, tour.tourConfig);
+
+        // Move on to the next hop and reset the timing info
+        currentIndex += 1;
+        start = undefined;
+
+        deferred.progress({
+        	currentHop: currentIndex,
+        	totalHops: tour.hops.length
+        });
+      }
+
+      // Check if we're done. If we are, good, resolve the deferred and get outta here. Otherwise, repeat when the next animation opportunity comes up.
+      if (currentIndex < tour.hops.length) {
+        window.requestAnimationFrame(updateAnimation); 
+      } else {
+        deferred.resolve();
+      }
+    }
+  }
+
+
+  /// TOUR ANIMATION VISUALISATION
+  function clearTourGraphics(tour) {
+    tour.hopsGraphicsLayer.removeAll();
+    tour.stopsGraphicsLayer.removeAll();
+  }
+
+  function showStop(stop, stopsGraphicsLayer, config) {
+    stopsGraphicsLayer.add(stop);
+    stopsGraphicsLayer.add(labelForStop(stop, config));
+  }
+
+  function labelForStop(stop, config) {
+    var yOffset = stop.attributes.__label_yOffset || 0;
+    var alignment = stop.attributes.__label_alignment || "center";
+
+    var labelGraphic = new Graphic({
+      geometry: stop.geometry,
+      symbol: new TextSymbol({
+        color: "white",
+        haloColor: "black",
+        haloSize: "3px",
+        text: stop.attributes[config.data.stopNameField],
+        xoffset: 0,
+        yoffset: yOffset,
+        horizontalAlignment: alignment,
+        font: {  // autocast as esri/symbols/Font
+          size: 12,
+          family: "sans-serif",
+          weight: "light"
+        }
+      })
+    });
+
+    return labelGraphic;
+  }
+
 
   /// Polyline clipping
   function getSubline(sourceLine, portionToReturn) {
@@ -462,49 +500,8 @@ function (GraphicsLayer,
     return subLine;
   }
 
-  /// Visual Hop-by-hop debug
-  /// Be sure to change the CSS to show the "hopsDiv" and change the "mainArea" right margin.
-  function addHopsMaps(hops) {
-    for (var i=0; i < hops.length; i++) {
-      var hop = hops[i];
-      addMapForHop(hop);
-    }
-  }
 
-  function addMapForHop(hop) {
-    var newDiv = document.createElement("div");
-    newDiv.id = (hop.origin.attributes[tourConfig.data.stopNameField] + " to " + hop.destination.attributes[tourConfig.data.stopNameField]).replace(" ","_");
-    newDiv.className = "hopMap";
-    var hopsDiv = document.getElementById("hopsDiv");
-    hopsDiv.insertAdjacentElement("beforeend", newDiv);
-    var hopsLayer = new GraphicsLayer({ renderer: hopsGraphicsLayer.renderer }),
-        stopsLayer = new GraphicsLayer({ renderer: stopsGraphicsLayer.renderer }),
-        overallLayer = new GraphicsLayer({ renderer: hopsLayer.renderer.clone() }),
-        hopMap = new Map({
-          basemap: map.basemap,
-          layers: [
-            overallLayer,
-            hopsLayer,
-            stopsLayer
-          ]
-        }),
-        hopView = new MapView({
-          container: newDiv.id,
-          map: hopMap,
-          extent: hop.geodesicLine.extent.clone().expand(1.6)
-        });
-
-    overallLayer.renderer.symbol.color = [0,255,0];
-
-    watchUtils.whenTrueOnce(hopView, "ready", function () {
-      showStop(hop.origin.clone(), stopsLayer, this.tourConfig);
-      showStop(hop.destination.clone(), stopsLayer, this.tourConfig);
-      hopsLayer.add(new Graphic({ geometry: hop.geodesicLine.clone() }));
-    });
-
-    hopViews.push({view: hopView, map: hopMap});
-  }
-
+  /// TOUR CONFIGURATION
   function getDefaultConfig() {
     return {
       useActualRoute: false,
@@ -552,7 +549,7 @@ function (GraphicsLayer,
   function loadTourConfig() {
     var config = getDefaultConfig();
 
-    var routeServiceURL = getParameterByName("agolRouteResultURL");
+    var routeServiceURL = getParameterByName("routeResultServiceURL");
 
     if (routeServiceURL) {
       config.data.stopServiceURL = routeServiceURL + "/" + config.data.stopLayerID;
@@ -567,7 +564,7 @@ function (GraphicsLayer,
 
     if (config.data.stopServiceURL === null && !routeServiceURL) {
       // Populate some demo defaults.
-      console.warn("No 'stopServiceURL' or 'agolRouteResultURL' provided. Using default demo service: https://services.arcgis.com/OfH668nDRN7tbJh0/arcgis/rest/services/Oakland_to_Gloucester/FeatureServer");
+      console.warn("No 'stopServiceURL' or 'routeResultServiceURL' provided. Using default demo service: https://services.arcgis.com/OfH668nDRN7tbJh0/arcgis/rest/services/Oakland_to_Gloucester/FeatureServer");
       routeServiceURL = "https://services.arcgis.com/OfH668nDRN7tbJh0/arcgis/rest/services/Oakland_to_Gloucester/FeatureServer";
       config.data.stopServiceURL = routeServiceURL + "/" + config.data.stopLayerID;
       if (!getParameterByName("forceGreatCircleArcs")) {
