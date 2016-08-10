@@ -64,10 +64,10 @@ require([
 
 The following samples are included:
 
-* 2D Sample with UI control (the UI is hidden while the animation progresses) [here](https://nixta.github.io/tourmap/) ([great circle version](https://nixta.github.io/tourmap/?forceGreatCircleArcs=true)).
-* 3D Sample with UI control [here](https://nixta.github.io/tourmap/index3d.html) ([great circle version](https://nixta.github.io/tourmap/index3d.html?forceGreatCircleArcs=true)).
-* Minimal 2D sample with property watching [here](https://nixta.github.io/tourmap/simple.html) ([great circle version](https://nixta.github.io/tourmap/simple.html?forceGreatCircleArcs=true)).
-* Minimal 2D auto-starting sample [here](https://nixta.github.io/tourmap/simple-autostart.html) ([great circle version](https://nixta.github.io/tourmap/simple-autostart.html?forceGreatCircleArcs=true)).
+* 2D Sample with UI control (the UI is hidden while the animation progresses) [here](https://nixta.github.io/tourmap/samples/index2d.html) ([great circle version](https://nixta.github.io/tourmap/samples/index2d.html?forceGreatCircleArcs=true)).
+* 3D Sample with UI control [here](https://nixta.github.io/tourmap/samples/index3d.html) ([great circle version](https://nixta.github.io/tourmap/samples/index3d.html?forceGreatCircleArcs=true)).
+* Minimal 2D sample with property watching [here](https://nixta.github.io/tourmap/samples/simple.html) ([great circle version](https://nixta.github.io/tourmap/samples/simple.html?forceGreatCircleArcs=true)).
+* Minimal 2D auto-starting sample [here](https://nixta.github.io/tourmap/samples/simple-autostart.html) ([great circle version](https://nixta.github.io/tourmap/samples/simple-autostart.html?forceGreatCircleArcs=true)).
 
 
 ### Constructor

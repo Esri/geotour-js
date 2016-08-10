@@ -34,16 +34,19 @@
 </body>
 
 <script type="text/javascript">
+// The location.pathname.substring() logic below may look confusing but all its doing is
+// enabling us to load the api from a CDN and load local modules from the correct location.
+var package_path = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
 var dojoConfig = {
   packages: [{
     name: "tour-map",
-    location: 'https://nixta.github.io/tourmap/src/js'
+    location: package_path + '/../src/js'
   }]
 };
 </script>
 
 <script src="https://js.arcgis.com/4.0/"></script>
-<script src="util/js/esri-view-ui-visibility.js"></script>
+<script src="../util/js/esri-view-ui-visibility.js"></script>
 
 <script type="text/javascript">
 require([

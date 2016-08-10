@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
-  <title>Simple Map Tour with AutoStart</title>
+  <title>Simple Map Tour</title>
 
   <link rel="stylesheet" href="https://js.arcgis.com/4.0/esri/css/main.css">
   
@@ -21,10 +21,13 @@
 </body>
 
 <script type="text/javascript">
+// The location.pathname.substring() logic below may look confusing but all its doing is
+// enabling us to load the api from a CDN and load local modules from the correct location.
+var package_path = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
 var dojoConfig = {
   packages: [{
     name: "tour-map",
-    location: 'https://nixta.github.io/tourmap/src/js'
+    location: package_path + '/../src/js'
   }]
 };
 </script>
@@ -57,7 +60,13 @@ require([
     zoom: 4
   });
 
-  var tour = new Tour(view, true);
+  var tour = new Tour(view);
+
+  tour.watch("ready", function () {
+    view.goTo(tour.extent).then(function () {
+      tour.animate();
+    });
+  });
 });
 </script>
 </html>
