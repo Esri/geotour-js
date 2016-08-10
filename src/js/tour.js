@@ -110,11 +110,6 @@ function (GraphicsLayer,
     tour.extent = undefined;
     tour.loadError = undefined;
 
-    tour.view.map.addMany([
-      tour.hopsGraphicsLayer,
-      tour.stopsGraphicsLayer
-    ]);
-
     var queryPromises = getQueryPromises(tour.tourConfig);
     handleQueryPromises(tour, queryPromises);
   }
@@ -179,6 +174,12 @@ function (GraphicsLayer,
       tour.extent = geometryEngine.union(tour.hops.map(function(hop) {
         return hop.line.extent;
       })).extent;
+
+      // Add layers to display the tour.
+      tour.view.map.addMany([
+        tour.hopsGraphicsLayer,
+        tour.stopsGraphicsLayer
+      ]);
 
       // OK. We're ready to animate.
       tour.ready = true;
