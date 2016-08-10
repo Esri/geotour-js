@@ -16,7 +16,7 @@ All it requires is a feature service with integer `Sequence` and string `Name` f
 * Watchable properties, in line with the 4.0 JavaScript API.
 
 ## Usage
-Include the library by modifying `dojoConfig` before including the JS API (see the [Advanced] section below for your own deployments).
+Include the library by modifying `dojoConfig` before including the JS API (see the [Advanced](#relative-paths-in-the-dojoconfig) section below for your own deployments).
 
 ``` JavaScript
 <script type="text/javascript">
@@ -169,7 +169,7 @@ If you are a masochist, you can also provide a full configuration object to the 
 
 If you pass a manually created configuration parameter, the component will not scan the Query String.
 
-### Relative Paths in the DojoConfig
+### Relative Paths in the dojoConfig
 The [Usage](#usage) section above shows a fixed location for the component. But since it's not recommended to rely on GitHub as a CDN like this, the following code sets up dojo to load the library relative to the HTML file:
 
 ``` JavaScript
