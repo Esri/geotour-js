@@ -137,7 +137,7 @@ The following URL parameters are also accepted:
 | Parameter           | Value |
 | ------------------- | ----- |
 | `forceGreatCircleArcs` | Any value (but be a decent human being and use `true`) will force Great Circle lines to be drawn between stops in the case where detailed polylines are provided (see `agolRouteResultURL`). If you just provide a `stopServiceURL` this parameter is ignored. |
-| `agolRouteResultURL` | A URL to a service created from an ArcGIS Online Directions calculation. At the time of writing (July 9, 2016), a bug in ArcGIS Online's Web Map Viewer means only simple routes can be saved this way (a fix is coming). The demo tour (no parameters) is the equivalent of just providing this parameter with [this sample service](https://services.arcgis.com/OfH668nDRN7tbJh0/arcgis/rest/services/Oakland_to_Gloucester/FeatureServer"). |
+| `agolRouteResultURL` | A URL to a service created from an ArcGIS Online Directions calculation. At the time of writing (July 9, 2016), a bug in ArcGIS Online's Web Map Viewer means only simple routes can be saved this way (a fix is coming). The demo tour (no parameters) is the equivalent of just providing this parameter with [this sample service](https://services.arcgis.com/OfH668nDRN7tbJh0/arcgis/rest/services/Oakland_to_Gloucester/FeatureServer). |
 
 If you are a masochist, you can also provide a full configuration object to the constructor as the second parameter. This must be a valid config object. You can use two `MapTour` class-level methods to obtain config objects for modification before passing to the constructor. This would be a good place to mention that pull requests are accepted:
 
