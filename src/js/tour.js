@@ -85,7 +85,7 @@ function (GraphicsLayer,
         }.bind(this));
       }
     },
-  	animate: function() {
+    animate: function() {
       return animateTour(this);
     },
     animateWithDelay: function(delay) {
@@ -94,7 +94,7 @@ function (GraphicsLayer,
     clearDisplay: function() {
       clearTourGraphics(this);
     }
-	});
+  });
 
   // Provide a Class Level method to read default config.
   tourClass.getConfig = loadTourConfig;
@@ -343,10 +343,10 @@ function (GraphicsLayer,
     return deferred;
 
     function updateAnimation(timeStamp) {
-    	if (deferred.isCanceled()) {
-    		deferred.reject("Tour cancelled by user.");
-    		return;
-    	}
+      if (deferred.isCanceled()) {
+        deferred.reject("Tour cancelled by user.");
+        return;
+      }
 
       // Let's figure out where we should be in the animation for this timestamp.
       var currentHopInfo = tour.hops[currentIndex];
@@ -390,8 +390,8 @@ function (GraphicsLayer,
         start = undefined;
 
         deferred.progress({
-        	currentHop: currentIndex,
-        	totalHops: tour.hops.length
+          currentHop: currentIndex,
+          totalHops: tour.hops.length
         });
       }
 
