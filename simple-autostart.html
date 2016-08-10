@@ -21,13 +21,10 @@
 </body>
 
 <script type="text/javascript">
-var package_path = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
 var dojoConfig = {
-  //The location.pathname.replace() logic below may look confusing but all its doing is
-  // enabling us to load the api from a CDN and load local modules from the correct location.
   packages: [{
-      name: "map-tour",
-      location: package_path + '/src/js'
+    name: "tour-map",
+    location: 'https://nixta.github.io/tourmap/src/js'
   }]
 };
 </script>
@@ -39,9 +36,9 @@ require([
   "esri/Map",
   "esri/views/MapView",
   "esri/layers/TileLayer",
-  "map-tour/tour",
+  "tour-map/tour",
   "dojo/domReady!"
-], function(Map, MapView, TileLayer, MapTour) {
+], function(Map, MapView, TileLayer, Tour) {
 
   // Create the map.
   var map = new Map({
@@ -60,7 +57,7 @@ require([
     zoom: 4
   });
 
-  var tour = new MapTour(view, true);
+  var tour = new Tour(view, true);
 });
 </script>
 </html>

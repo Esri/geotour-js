@@ -34,15 +34,12 @@
 </body>
 
 <script type="text/javascript">
-  var package_path = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
-  var dojoConfig = {
-    //The location.pathname.replace() logic below may look confusing but all its doing is
-    // enabling us to load the api from a CDN and load local modules from the correct location.
-    packages: [{
-        name: "map-tour",
-        location: package_path + '/src/js'
-    }]
-  };
+var dojoConfig = {
+  packages: [{
+    name: "tour-map",
+    location: 'https://nixta.github.io/tourmap/src/js'
+  }]
+};
 </script>
 
 <script src="https://js.arcgis.com/4.0/"></script>
@@ -53,10 +50,10 @@ require([
   "esri/Map",
   "esri/views/SceneView",
   "esri/layers/TileLayer",
-  "map-tour/tour",
+  "tour-map/tour",
   "esri/core/watchUtils",
   "dojo/domReady!"
-], function(Map, SceneView, TileLayer, MapTour, watchUtils) {
+], function(Map, SceneView, TileLayer, Tour, watchUtils) {
 
 
   // Create the map.
@@ -82,7 +79,7 @@ require([
   // Move the instructions DIV to the SceneView UI.
   view.ui.add(document.getElementById("instructions"), "top-right");
 
-  var tour = new MapTour(view);
+  var tour = new Tour(view);
 
   tour.watch("ready", function () {
     // Zoom Map

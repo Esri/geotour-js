@@ -23,6 +23,7 @@ function (GraphicsLayer,
   watchUtils, Accessor,
   all, Deferred, declare)
 {
+  var demoRouteServiceURL = "https://services.arcgis.com/OfH668nDRN7tbJh0/arcgis/rest/services/Oakland_to_Gloucester/FeatureServer";
 
   var tourClass = Accessor.createSubclass({
     properties: {
@@ -121,7 +122,7 @@ function (GraphicsLayer,
   function getQueryPromises(config) {
     // Create query task to load the stops
     var stopQueryTask = new QueryTask({
-      url: config.data.stopServiceURL
+      url: config.data.stopLayerURL
     });
 
     // Make sure we get back the attributes we need, and order appropriately
@@ -162,6 +163,7 @@ function (GraphicsLayer,
       var stopFeatures = results[0].features;
 
       if (!validateStops(stopFeatures, tour.tourConfig)) {
+        tour.loadError = "Error processing data from query results. Check browser console for more information.";
         return;
       }
 
@@ -198,11 +200,11 @@ function (GraphicsLayer,
     } else {
       var sampleFeature = stopFeatures[0];
       if (!sampleFeature.attributes.hasOwnProperty(config.data.stopNameField)) {
-        console.error("The data returned for the stops doesn't seem to have a " + config.data.stopNameField + " field!");
+        console.error("The data returned for the stops doesn't seem to have a '" + config.data.stopNameField + "' field!");
         looksOk = false;
       }
       if (!sampleFeature.attributes.hasOwnProperty(config.data.stopSequenceField)) {
-        console.error("The data returned for the stops doesn't seem to have a " + config.data.stopSequenceField + " field!");
+        console.error("The data returned for the stops doesn't seem to have a '" + config.data.stopSequenceField + "' field!");
         looksOk = false;
       }
     }
@@ -509,7 +511,7 @@ function (GraphicsLayer,
       autoStartDelay: 0,
       spatialReference: null,
       data: {
-        stopServiceURL: null,
+        stopLayerURL: null,
         stopLayerID: 1,
         stopNameField: "Name",
         stopSequenceField: "Sequence",
@@ -519,7 +521,7 @@ function (GraphicsLayer,
       },
       animation: {
         duration: 30.0,
-        maxFPS: 30
+        maxFPS: 30 // Used when generating Great Circles to estimate a sensible min distance between points.
       },
       symbols: {
         tour: new SimpleLineSymbol({
@@ -546,34 +548,47 @@ function (GraphicsLayer,
     };
   }
 
+  function loadDemoConfig(config) {
+    config.data.stopLayerURL = demoRouteServiceURL + "/" + config.data.stopLayerID;
+    if (!getParameterByName("forceGreatCircleArcs")) {
+      config.data.trackServiceURL = demoRouteServiceURL + "/" + config.data.trackLayerID;
+    }
+    config.labelPositions = {
+      offsetBelow: [3,4,9,13,17,19,20,23,25,30,42],
+      leftAlign: [1,5,6,11,15,22,23,24,27,33,38,42,44],
+      rightAlign: [8,16,17,18,19,21,28,30,34,35,36,37,39,40,43]
+    }
+  }
+
   function loadTourConfig() {
     var config = getDefaultConfig();
 
     var routeServiceURL = getParameterByName("routeResultServiceURL");
 
     if (routeServiceURL) {
-      config.data.stopServiceURL = routeServiceURL + "/" + config.data.stopLayerID;
+      config.data.stopLayerURL = routeServiceURL + "/" + config.data.stopLayerID;
       if (!getParameterByName("forceGreatCircleArcs")) {
         config.data.trackServiceURL = routeServiceURL + "/" + config.data.trackLayerID;
       }
     } else {
-      config.data.stopServiceURL = getParameterByName("stopServiceURL") || config.data.stopServiceURL;
+      config.data.stopLayerURL = getParameterByName("stopLayerURL") || config.data.stopLayerURL;
       config.data.stopNameField = getParameterByName("stopNameField") || config.data.stopNameField;
       config.data.stopSequenceField = getParameterByName("stopSequenceField") || config.data.stopSequenceField;
     }
 
-    if (config.data.stopServiceURL === null && !routeServiceURL) {
+    if (config.data.stopLayerURL === null && !routeServiceURL) {
       // Populate some demo defaults.
-      console.warn("No 'stopServiceURL' or 'routeResultServiceURL' provided. Using default demo service: https://services.arcgis.com/OfH668nDRN7tbJh0/arcgis/rest/services/Oakland_to_Gloucester/FeatureServer");
-      routeServiceURL = "https://services.arcgis.com/OfH668nDRN7tbJh0/arcgis/rest/services/Oakland_to_Gloucester/FeatureServer";
-      config.data.stopServiceURL = routeServiceURL + "/" + config.data.stopLayerID;
-      if (!getParameterByName("forceGreatCircleArcs")) {
-        config.data.trackServiceURL = routeServiceURL + "/" + config.data.trackLayerID;
-      }
-      config.labelPositions = {
-        offsetBelow: [3,4,9,13,17,19,20,23,25,30,42],
-        leftAlign: [1,5,6,11,15,22,23,24,27,33,38,42,44],
-        rightAlign: [8,16,17,18,19,21,28,30,34,35,36,37,39,40,43]
+      console.warn("No 'stopLayerURL' or 'routeResultServiceURL' provided. Using default demo service: " + demoRouteServiceURL);
+      loadDemoConfig(config);
+    }
+
+    var parsedDuration = getParameterByName("duration");
+    if (parsedDuration) {
+      parsedDuration = parseFloat(parsedDuration);
+      if (!isNaN(parsedDuration) && parsedDuration > 0) {
+        config.animation.duration = parsedDuration;
+      } else {
+        console.warn("`duration` parameter must be a positive number! Defaulting to " + config.animation.duration + " seconds.")
       }
     }
 
