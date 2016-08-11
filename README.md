@@ -1,6 +1,6 @@
 # Tour Map
 
-This library takes a feature service of stops and animates great circle lines between them using the ArcGIS JavaScript API in either a 2D `MapView` or a 3D `SceneView`.
+This component takes a feature service of stops and animates great circle lines between them using the 4.0 ArcGIS API for JavaScript in either a 2D [`MapView`](https://developers.arcgis.com/javascript/latest/api-reference/esri-views-MapView.html) or a 3D [`SceneView`](https://developers.arcgis.com/javascript/latest/api-reference/esri-views-SceneView.html).
 
 See a live version [here](https://nixta.github.io/tourmap/).
 
@@ -16,7 +16,7 @@ All it requires is a feature service with integer `Sequence` and string `Name` f
 * Watchable properties, in line with the 4.0 ArcGIS API for JavaScript.
 
 ## Usage
-Include the library by modifying `dojoConfig` before including the JS API (see the [Advanced](#relative-paths-in-the-dojoconfig) section below for your own deployments).
+Include the component by modifying `dojoConfig` before including the JS API (see the [Advanced](#relative-paths-in-the-dojoconfig) section below for your own deployments).
 
 ``` JavaScript
 <script type="text/javascript">
@@ -147,7 +147,7 @@ There are many ways to create a Stop Service that you can pass to `stopLayerURL`
 * Has Point Geometry.
 * Has a `Name` field to display on the map.
 * Has a `Sequence` field to determine the order the tour visits the points.
-* Is public.
+* Is shared with everyone (i.e. public).
 
 Here are some ways to create a suitable stop service:
 
@@ -166,12 +166,12 @@ Use the following additional options only if you really understand what you're d
 | `routeResultServiceURL` | A URL to a service created from an ArcGIS Online Directions calculation. If this is provided, `stopLayerURL`, `stopNameField` and `stopSequenceField` are ignored. The demo tour (no parameters) is the equivalent of just providing this parameter with [this sample service](https://services.arcgis.com/OfH668nDRN7tbJh0/arcgis/rest/services/Oakland_to_Gloucester/FeatureServer).<br><br>**NOTE**: At the time of writing (July 9, 2016), a bug in ArcGIS Online's Web Map Viewer means only relatively simple/short routes can be saved this way (a fix is coming). It's recommended you don't try this at home until that ArcGIS Online bug is fixed, at which point this README will get updated with instructions for creating one of these. |
 | `forceGreatCircleArcs` | Any value (but be a decent human being and use `true`) will force Great Circle lines to be drawn between stops in the case where detailed polylines are provided  with `routeResultServiceURL`. |
 
-Both these advanced parameters may be provided in the URL as well as in the `Tour` constructor and can be specified `allowURLParameters`.
+Both these advanced parameters may be provided in the URL as well as in the `Tour` constructor and can be specified in the `allowURLParameters` array.
 
 ### Relative Paths in the dojoConfig
-The [Usage](#usage) section above shows a fixed location for the component. But since it's not recommended to rely on GitHub as a CDN like this, the following code sets up dojo to load the library relative to the HTML file:
+The [Usage](#usage) section above shows a fixed location for the component. But since it's not recommended to rely on GitHub as a CDN like this, the following code sets up dojo to load the component relative to the HTML file:
 
-``` JavaScript
+``` HTML
 <script type="text/javascript">
 // The location.pathname.substring() logic below may look confusing but all its doing is
 // enabling us to load the api from a CDN and load local modules from the correct location.
