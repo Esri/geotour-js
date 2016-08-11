@@ -95,7 +95,6 @@ require([
 
       // Hide the UI and mouse
       view.ui.hide();
-      document.body.style.cursor = "none";
 
       // The tour will do this automatically, but we have a pause here and want to force the display to
       // be cleared before the pause happens.
@@ -128,7 +127,6 @@ require([
 
       function restoreUI() {
         view.ui.show();
-        document.body.style.cursor = "default";
 
         clickEvent = view.on("click", handleClick);
       }

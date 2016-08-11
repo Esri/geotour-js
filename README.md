@@ -65,14 +65,6 @@ require([
 });
 ```
 
-The following samples are included:
-
-* 2D Sample with UI control (the UI is hidden while the animation progresses) [here](https://nixta.github.io/tourmap/samples/index2d.html) ([great circle version](https://nixta.github.io/tourmap/samples/index2d.html?forceGreatCircleArcs=true)).
-* 3D Sample with UI control [here](https://nixta.github.io/tourmap/samples/index3d.html) ([great circle version](https://nixta.github.io/tourmap/samples/index3d.html?forceGreatCircleArcs=true)).
-* Minimal 2D sample with property watching [here](https://nixta.github.io/tourmap/samples/simple.html) ([great circle version](https://nixta.github.io/tourmap/samples/simple.html?forceGreatCircleArcs=true)).
-* Minimal 2D auto-starting sample [here](https://nixta.github.io/tourmap/samples/simple-autostart.html) ([great circle version](https://nixta.github.io/tourmap/samples/simple-autostart.html?forceGreatCircleArcs=true)).
-
-
 ### Constructor
 The constructor requires at least one parameter, the `MapView` or `SceneView` to animate the tour in. By default, the tour will load its data but will wait to be manually started:
 
@@ -155,6 +147,14 @@ Here are some ways to create a suitable stop service:
 * Upload a CSV file to ArcGIS Online. Be sure to include a `Name` and `Sequence` column and populate them appropriately. If the rows in the file have [suitable lat/lon or x/y fields](https://doc.arcgis.com/en/arcgis-online/reference/csv-gpx.htm#GUID-4EDCE12E-285E-41D0-A3B8-1BAB4B111922), this is free. Geocoding locations will consume credits.
 * [Create an empty Feature Layer](https://doc.arcgis.com/en/arcgis-online/share-maps/publish-features.htm#ESRI_SECTION1_809F1266856546EF9E6D2CEF3816FD7D) from an [existing service URL](http://services.arcgis.com/OfH668nDRN7tbJh0/arcgis/rest/services/GlobalTourDemo1/FeatureServer/0) and populate the data in ArcGIS Online.
 * Publish a layer to ArcGIS Online from ArcGIS Desktop.
+
+## Samples
+The following samples are included in this repo:
+
+* 2D Sample with UI control (the UI is hidden while the animation progresses) [here](https://nixta.github.io/tourmap/samples/index2d.html) ([great circle version](https://nixta.github.io/tourmap/samples/index2d.html?forceGreatCircleArcs=true)).
+* 3D Sample with UI control [here](https://nixta.github.io/tourmap/samples/index3d.html) ([great circle version](https://nixta.github.io/tourmap/samples/index3d.html?forceGreatCircleArcs=true)).
+* Minimal 2D sample with property watching [here](https://nixta.github.io/tourmap/samples/simple.html) ([great circle version](https://nixta.github.io/tourmap/samples/simple.html?forceGreatCircleArcs=true)).
+* Minimal 2D auto-starting sample [here](https://nixta.github.io/tourmap/samples/simple-autostart.html) ([great circle version](https://nixta.github.io/tourmap/samples/simple-autostart.html?forceGreatCircleArcs=true)).
 
 ## Advanced
 Use the following additional options only if you really understand what you're doing. You'll probably have to dig in and get to learn what the code and data are really getting up to behind your back.
