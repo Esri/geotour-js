@@ -11,6 +11,7 @@ define([
   "esri/tasks/support/Query",
   "esri/core/watchUtils",
   "esri/core/Accessor",
+  "esri/views/View",
   "dojo/promise/all",
   "dojo/Deferred",
   "dojo/_base/declare",
@@ -20,7 +21,7 @@ function (GraphicsLayer,
   SimpleRenderer, SimpleMarkerSymbol, SimpleLineSymbol, TextSymbol, 
   Graphic, Polyline, geometryEngine,
   QueryTask, Query,
-  watchUtils, Accessor,
+  watchUtils, Accessor, View,
   all, Deferred, declare)
 {
   var demoRouteServiceURL = "https://services.arcgis.com/OfH668nDRN7tbJh0/arcgis/rest/services/Oakland_to_Gloucester/FeatureServer";
@@ -31,19 +32,28 @@ function (GraphicsLayer,
       extent: undefined,
       loadError: undefined
     },
-    constructor: function(mapView, configOrAutoStart) {
+    constructor: function(mapViewOrConfig) {
+      // Can either pass in a MapView/SceneView and a boolean/integer,
+      // Or an object with at least a "view" property.
+      var mapView, config = {};
+      if (typeof mapViewOrConfig.isInstanceOf === "function") {
+        mapView = mapViewOrConfig;
+      } else {
+        config = mapViewOrConfig;
+        mapView = config.view;
+        delete config.view;
+      }
+
+      if (!mapView.isInstanceOf(View)) {
+        throw "You must pass a MapView or SceneView as either the first parameter, or a 'view' property of the first parameter object.";
+      }
+
       this.view = mapView;
 
-      // Figure out the second parameter. Bool, time delay, or full config?
-      if (typeof configOrAutoStart === "boolean") {
-        this.tourConfig = loadTourConfig();
-        this.tourConfig.autoStart = configOrAutoStart;
-      } else if (typeof configOrAutoStart === "number") {
-        this.tourConfig = loadTourConfig();
-        this.tourConfig.autoStart = true;
-        this.tourConfig.autoStartDelay = configOrAutoStart;
+      if (typeof config === "object") {
+        this.tourConfig = readConfig(config);
       } else {
-        this.tourConfig = configOrAutoStart || loadTourConfig();
+        throw "You must pass a MapView, SceneView, of JSON Configuration Object as the first parameter!";
       }
 
       this.hops = [];
@@ -67,12 +77,18 @@ function (GraphicsLayer,
       if (this.tourConfig.spatialReference) {
         // User can override the spatialReference directly, so we don't have
         // to wait for the view to read it.
-        loadTour(this);
+          loadTour(this);
       } else {
         // Otherwise, wait for the view to load so we can use its Spatial Reference.
         watchUtils.whenTrueOnce(this.view, "ready", function() {
           this.tourConfig.spatialReference = this.view.spatialReference;
-          loadTour(this);
+          try {
+            loadTour(this);
+          } catch (err) {
+            console.error(err);
+            this.loadError = err;
+            return;
+          }
         }.bind(this));
       }
 
@@ -96,10 +112,6 @@ function (GraphicsLayer,
     }
   });
 
-  // Provide a Class Level method to read default config.
-  tourClass.getConfig = loadTourConfig;
-  tourClass.defaultConfig = getDefaultConfig;
-
   return tourClass;
 
 
@@ -115,6 +127,11 @@ function (GraphicsLayer,
   }
 
   function getQueryPromises(config) {
+    // Validate some stuff
+    if (!config.data.stopLayerURL) {
+      throw "Cannot read stops! stopLayerURL = " + config.data.stopLayerURL;
+    }
+
     // Create query task to load the stops
     var stopQueryTask = new QueryTask({
       url: config.data.stopLayerURL
@@ -507,7 +524,7 @@ function (GraphicsLayer,
   /// TOUR CONFIGURATION
   function getDefaultConfig() {
     return {
-      useActualRoute: false,
+      useActualRoute: undefined,
       autoStart: false,
       autoStartDelay: 0,
       spatialReference: null,
@@ -549,54 +566,188 @@ function (GraphicsLayer,
     };
   }
 
-  function loadDemoConfig(config) {
-    config.data.stopLayerURL = demoRouteServiceURL + "/" + config.data.stopLayerID;
-    if (!getParameterByName("forceGreatCircleArcs")) {
-      config.data.trackServiceURL = demoRouteServiceURL + "/" + config.data.trackLayerID;
-    }
-    config.labelPositions = {
-      offsetBelow: [3,4,9,13,17,19,20,23,25,30,42],
-      leftAlign: [1,5,6,11,15,22,23,24,27,33,38,42,44],
-      rightAlign: [8,16,17,18,19,21,28,30,34,35,36,37,39,40,43]
-    }
+  function getValidParams() {
+    return {
+      autoStart: { 
+        path: "autoStart", 
+        urlValid: true,
+        mapFunc: mapBool
+      },
+      autoStartDelay: { 
+        path: "autoStartDelay",
+        urlValid: true,
+        mapFunc: mapInt
+      },
+      duration: { 
+        path: "animation.duration",
+        urlValid: true,
+        mapFunc: mapFloat
+      },
+      stopLayerURL: { 
+        path: "data.stopLayerURL", 
+        urlValid: true
+      },
+      stopNameField: { 
+        path: "data.stopNameField",
+        urlValid: true
+      },
+      stopSequenceField: { 
+        path: "data.stopSequenceField",
+        urlValid: true
+      },
+
+      routeResultServiceURL: {
+        path: "",
+        urlValid: true
+      },
+      forceGreatCircleArcs: {
+        path: "useActualRoute",
+        urlValid: true,
+        mapFunc: function(useArcs) {
+          return !mapBool(useArcs);
+        }
+      },
+
+      tourSymbol: { 
+        path: "symbols.tour",
+        urlValid: false
+      },
+      stopSymbol: { 
+        path: "symbols.stops",
+        urlValid: false
+      },
+      labelPositions: { 
+        path: "labelPositions",
+        urlValid: false
+      }
+    };
   }
 
-  function loadTourConfig() {
-    var config = getDefaultConfig();
+  function mapBool(strBool) {
+    if (typeof strBool === "string") {
+      return strBool == "true" ? true : (strBool == "false" ? false : undefined);
+    } else if (typeof strBool === "boolean") {
+      return strBool;
+    }
+    return undefined;
+  }
 
-    var routeServiceURL = getParameterByName("routeResultServiceURL");
+  function mapInt(strInt) {
+    var parsed = parseInt(strInt);
+    if (!isNaN(parsed) && parsed > 0) {
+      return parsed;
+    }
+    return undefined;
+  }
 
-    if (routeServiceURL) {
-      config.data.stopLayerURL = routeServiceURL + "/" + config.data.stopLayerID;
-      if (!getParameterByName("forceGreatCircleArcs")) {
-        config.data.trackServiceURL = routeServiceURL + "/" + config.data.trackLayerID;
-      }
-    } else {
-      config.data.stopLayerURL = getParameterByName("stopLayerURL") || config.data.stopLayerURL;
-      config.data.stopNameField = getParameterByName("stopNameField") || config.data.stopNameField;
-      config.data.stopSequenceField = getParameterByName("stopSequenceField") || config.data.stopSequenceField;
+  function mapFloat(strFloat) {
+    var parsed = parseFloat(strFloat);
+    if (!isNaN(parsed) && parsed > 0) {
+      return parsed;
+    }
+    return undefined;
+  }
+
+  function readConfig(config) {
+    // These are parameters that can be set. Those with urlValid can also be set via the Query String.
+    // If allowURLParameter == false, no parameters can be passed via the URL.
+    // Identical parameters passed via the constructor and via the URL are read from the constructor.
+    var validParams = getValidParams();
+
+    // Have we disallowed URL parameters?
+    var allowURLParameters = (typeof config.allowURLParameters === "boolean") ? config.allowURLParameters : true;
+
+    // Get a list of parameters that can be read from the URL.
+    var validURLParams = !allowURLParameters ? [] : Object.getOwnPropertyNames(validParams).filter(function (paramName) {
+      return validParams[paramName].urlValid;
+    });
+
+    // If a whitelist was provided, narrow the list down according to that whitelist.
+    if (Array.isArray(config.allowURLParameters)) {
+      validURLParams = validURLParams.filter(function (paramName) {
+        return config.allowURLParameters.indexOf(paramName) > -1;
+      });
     }
 
-    if (config.data.stopLayerURL === null && !routeServiceURL) {
-      // Populate some demo defaults.
-      console.warn("No 'stopLayerURL' or 'routeResultServiceURL' provided. Using default demo service: " + demoRouteServiceURL);
-      loadDemoConfig(config);
-    }
-
-    var parsedDuration = getParameterByName("duration");
-    if (parsedDuration) {
-      parsedDuration = parseFloat(parsedDuration);
-      if (!isNaN(parsedDuration) && parsedDuration > 0) {
-        config.animation.duration = parsedDuration;
+    // Now read the parameters, from the constructor if possible, or else the URL if allowed.
+    var paramNames = Object.getOwnPropertyNames(validParams);
+    for (var i=0; i < paramNames.length; i++) {
+      var paramName = paramNames[i],
+          paramInfo = validParams[paramName],
+          paramVal = (config[paramName] !== undefined) ? config[paramName] : ((validURLParams.indexOf(paramName) > -1) ? getParameterByName(paramName) : undefined);
+      
+      if (paramVal !== undefined) {
+        // If a mapFunc is specified for the parameter, use that to transform the read parameter.
+        if (typeof paramInfo.mapFunc === "function") {
+          paramInfo.value = paramInfo.mapFunc(paramVal);
+        } else {
+          paramInfo.value = paramVal;
+        }
       } else {
-        console.warn("`duration` parameter must be a positive number! Defaulting to " + config.animation.duration + " seconds.")
+        // If no valid value was read, discard the parameter.
+        delete validParams[paramName];
       }
     }
 
-    // Figure out if we're going to follow a polyline route or just great circle between each stop
-    config.useActualRoute = config.data.trackServiceURL !== null;
+    // Get a baseline deep configuration object.
+    var mergedConfig = getDefaultConfig();
 
-    return config;
+    // Handle the special case of "routeResultServiceURL" which invalidates some other parameters.
+    if (validParams.routeResultServiceURL) {
+      // Derive some URLs
+      validParams.stopLayerURL = {
+        path: "data.stopLayerURL", 
+        value: validParams.routeResultServiceURL.value + "/" + mergedConfig.data.stopLayerID
+      };
+      if (validParams.forceGreatCircleArcs && validParams.forceGreatCircleArcs.value === false) {
+        validParams.trackServiceURL = {
+          path: "data.trackServiceURL", 
+          value: validParams.routeResultServiceURL.value + "/" + mergedConfig.data.trackLayerID
+        };
+      }
+      // Ignore some other parameters
+      delete validParams.stopNameField;
+      delete validParams.stopSequenceField;
+    }
+
+    // Now merge the parameters we have left, wherever we read them from, into the default
+    // configuration object.
+    paramNames = Object.getOwnPropertyNames(validParams);
+    for (var i=0; i < paramNames.length; i++) {
+      var paramName = paramNames[i],
+          paramInfo = validParams[paramName],
+          paramValue = paramInfo.value,
+          targetKey = paramInfo.path.split("."),
+          targetObject = mergedConfig;
+
+      while (targetKey.length > 1) {
+        targetObject = targetObject[targetKey.shift()];
+      }
+
+      targetObject[targetKey[0]] = paramValue;
+    }
+
+    // If we don't have enough configuration info for a Tour, add the demo parameters.
+    fallbackToDemoConfigIfAppropriate(mergedConfig);
+
+    return mergedConfig;
+  }
+
+  function fallbackToDemoConfigIfAppropriate(config) {
+    if (!config.data.stopLayerURL) {
+      config.data.stopLayerURL = demoRouteServiceURL + "/" + config.data.stopLayerID;
+      if (config.useActualRoute !== false) {
+        config.useActualRoute = true;
+        config.data.trackServiceURL = demoRouteServiceURL + "/" + config.data.trackLayerID;
+      } else {
+        config.data.trackServiceURL = null;
+      }
+      config.labelPositions = {
+        offsetBelow: [3,4,9,13,17,19,20,23,25,30,42],
+        leftAlign: [1,5,6,11,15,22,23,24,27,33,38,42,44],
+        rightAlign: [8,16,17,18,19,21,28,30,34,35,36,37,39,40,43]
+      }
+    }
   }
 
   function getParameterByName(name) {
@@ -608,5 +759,4 @@ function (GraphicsLayer,
     if (!results[2]) return '';
     return decodeURIComponent(results[2].replace(/\+/g, " "));
   }
-
 });

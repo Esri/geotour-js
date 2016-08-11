@@ -13,7 +13,7 @@ All it requires is a feature service with integer `Sequence` and string `Name` f
 * Animate a tour between the stops stored in a Feature Layer.
 * Works in 2D or 3D.
 * Configuration via URL parameters.
-* Watchable properties, in line with the 4.0 JavaScript API.
+* Watchable properties, in line with the 4.0 ArcGIS API for JavaScript.
 
 ## Usage
 Include the library by modifying `dojoConfig` before including the JS API (see the [Advanced](#relative-paths-in-the-dojoconfig) section below for your own deployments).
@@ -58,7 +58,10 @@ require([
   });
 
   // Start a tour
-  var tour = new Tour(view, true);
+  var tour = new Tour({
+    view: view, 
+    autoStart: true
+  });
 });
 ```
 
@@ -77,22 +80,20 @@ The constructor requires at least one parameter, the `MapView` or `SceneView` to
   var tour = new Tour(view);
 ```
 
-The second parameter is optional and can be `true` to force the animation to start immediately or an `integer` (in milliseconds) to start the animation after a delay:
+Alternatively, you can pass in a JSON object to configure the Tour. In this case the animation is started automatically as soon as possible:
 
 ``` JavaScript
   // Start as soon as the view has loaded.
-  var tour = new Tour(view, true);
+  var tour = new Tour({
+    view: view, 
+    autoStart: true
+  });
 ```
 
-or
-
-``` JavaScript
-  // Start 2 seconds after the view finishes loading.
-  var tour = new Tour(view, 2000);
-```
+See the [Configuration Parameters](#configuration-parameters) section for more info.
 
 ### Animating the tour
-By default, the tour will not start automatically (see the constructors above). Without passing a second parameter to force a start, you should wait until the tour is `ready` (that is, it has loaded all its data and is ready to start).
+By default, the tour will not start automatically (see the constructors above). You should wait until the tour is `ready` (that is, it has loaded all its data and is ready to start).
 
 ``` JavaScript
   var tour = new Tour(view);
@@ -110,7 +111,7 @@ A `Tour` instance has the following [watchable](https://developers.arcgis.com/ja
 | Property | Description |
 | -------- | ----------- |
 | ready | `true` when enough data has been loaded to start the tour. Initially `false`. |
-| extent | An [`Extent`](https://developers.arcgis.com/javascript/latest/api-reference/esri-geometry-Extent.html) object describing the bounds of the tour. |
+| extent | An [`Extent`](https://developers.arcgis.com/javascript/latest/api-reference/esri-geometry-Extent.html) object describing the bounds of the tour. Will be populated by the time the tour is `ready`. |
 | loadError | Will be `undefined` unless an error is encountered loading the tour data. |
 
 ### Tour methods
@@ -122,18 +123,23 @@ A `Tour` instance has the following methods:
 | `animateWithDelay()` | Same as `animate()` but the first parameter is a delay in milliseconds before the animation begins. |
 | `clearDisplay()` | When you start an animation, any graphics from a previous display of the tour are cleared. This function is useful if you need to clear the display without starting a new animation. |
 
-### URL Parameters
+### Configuration Parameters
 
-By default a `Tour` instance will reference a demo dataset with a detailed real-world route. However, it will also scan the URL QueryString to override individual settings.
+Parameters can be passed into the tour constructor in a JSON object. The following parameters are supported:
 
 | Parameter           | Value |
 | ------------------- | ----- |
+| `allowURLParameters` | Set this to `false` to prevent configuration being read from the URL. It can also be set to an array to whitelist only specific properties (e.g. `["duration", "autoStartDelay"]`). Defaults to `true` to allow all properties to be specified in the URL. |
+| `autoStart` | Whether to start the tour automatically once the `MapView` or `SceneView` is ready. Default `false`. |
+| `autoStartDelay` | The delay in milliseconds before autostarting. Ignored if `autoStart` is not `true`. Default `0` (no delay). |
+| `duration` | Override the target duration of the entire animation in seconds (default 30s). This is an estimate but the component will try to meet the target. |
 | `stopLayerURL`    | The URL to a public Feature Service Layer containing points to tour between. See [Creating Data](#creating-data). |
 | `stopNameField`     | Override the field to use for reading the point's name to display on the map (default `Name`). |
 | `stopSequenceField` | Override the field to use for reading the point's sequence in the tour (default `Sequence`). |
-| `duration` | Override the target duration of the entire animation in seconds (default 30s). This is an estimate but the component will try to meet the target. |
 
-All parameters are optional. If no parameters are provided, a demo dataset is used (see the advanced `routeResultServiceURL` parameter). If a `stopLayerURL` is provided, the component will generate Great Circle Arcs between the stops.
+These settings may also be read from the URL's Query String, but values passed to the constructor will take precedence.
+
+All parameters are optional. If no parameters are provided, a demo dataset with a detailed real-world route is used (see the advanced `routeResultServiceURL` parameter). If a `stopLayerURL` is provided instead, the component will generate Great Circle Arcs between the stops.
 
 ### Creating data
 There are many ways to create a Stop Service that you can pass to `stopLayerURL`. The key is to create a Feature Service Layer that meets the following criteria:
@@ -151,7 +157,8 @@ Here are some ways to create a suitable stop service:
 * Publish a layer to ArcGIS Online from ArcGIS Desktop.
 
 ## Advanced
-The following additional options require really understanding what you're doing. You'll probably have to dig in and understand what the code and data are really getting up to behind your back.
+Use the following additional options only if you really understand what you're doing. You'll probably have to dig in and get to learn what the code and data are really getting up to behind your back.
+
 ### URL Parameters
 
 | Parameter           | Value |
@@ -159,15 +166,7 @@ The following additional options require really understanding what you're doing.
 | `routeResultServiceURL` | A URL to a service created from an ArcGIS Online Directions calculation. If this is provided, `stopLayerURL`, `stopNameField` and `stopSequenceField` are ignored. The demo tour (no parameters) is the equivalent of just providing this parameter with [this sample service](https://services.arcgis.com/OfH668nDRN7tbJh0/arcgis/rest/services/Oakland_to_Gloucester/FeatureServer).<br><br>**NOTE**: At the time of writing (July 9, 2016), a bug in ArcGIS Online's Web Map Viewer means only relatively simple/short routes can be saved this way (a fix is coming). It's recommended you don't try this at home until that ArcGIS Online bug is fixed, at which point this README will get updated with instructions for creating one of these. |
 | `forceGreatCircleArcs` | Any value (but be a decent human being and use `true`) will force Great Circle lines to be drawn between stops in the case where detailed polylines are provided  with `routeResultServiceURL`. |
 
-### Manual Configuration
-If you are a masochist, you can also provide a full configuration object to the constructor as the second parameter. This must be a valid config object. Class level `Tour` methods are provided to obtain config objects for modification before passing to the constructor. This would be a good place to mention that pull requests are accepted:
-
-| Class Method | Description |
-| ------------ | ----------- |
-| `defaultConfig()` | Return a default configuration object.|
-| `getConfig()` | Return a default configuration object populated with any relevant URL parameters for the current page. |
-
-If you pass a manually created configuration parameter, the component will not scan the Query String.
+Both these advanced parameters may be provided in the URL as well as in the `Tour` constructor and can be specified `allowURLParameters`.
 
 ### Relative Paths in the dojoConfig
 The [Usage](#usage) section above shows a fixed location for the component. But since it's not recommended to rely on GitHub as a CDN like this, the following code sets up dojo to load the library relative to the HTML file:

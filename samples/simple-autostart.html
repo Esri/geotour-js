@@ -60,7 +60,10 @@ require([
     zoom: 4
   });
 
-  var tour = new Tour(view, true);
+  var tour = new Tour({
+    view: view,
+    autoStart: true
+  });
 });
 </script>
 </html>
