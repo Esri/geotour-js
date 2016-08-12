@@ -332,7 +332,6 @@ function (GraphicsLayer,
     tour.clearDisplay();
 
     // Set up some graphics and geometries to work with.
-    var start, currentIndex = 0;
     var completedHopsLine, completedHopsGraphic, currentHopLine, currentHopGraphic;
 
     window.setTimeout(function() {
@@ -358,9 +357,19 @@ function (GraphicsLayer,
       });
     }, delay || 0);
 
+
+    var targetHopDuration = 1000 * tour.hopAnimationDuration;
+
+    var currentIndex = 0, frameCount = 0, totalFrameTime = 0;
+    var averageFramePeriod = averageFrameDuration = 1000/60;
+
+    var overallStartTime, hopEndTargetTime;
+
     return deferred;
 
     function updateAnimation(timeStamp) {
+      var frameStartTime = performance.now();
+
       if (deferred.isCanceled()) {
         deferred.reject("Tour cancelled by user.");
         return;
@@ -369,17 +378,24 @@ function (GraphicsLayer,
       // Let's figure out where we should be in the animation for this timestamp.
       var currentHopInfo = tour.hops[currentIndex];
 
-      if (!start) {
-        // If we just started a hop, we remember this timestamp.
-        start = timeStamp;
-        if (currentIndex == 0) {
-          // For the first hop only, also show the origin.
-          showStop(currentHopInfo.origin, tour.stopsGraphicsLayer, tour.tourConfig);
-        }
+      if (overallStartTime) {
+        averageFramePeriod = (frameStartTime - overallStartTime) / frameCount;
+        averageFrameDuration = totalFrameTime / frameCount;
+      } else {
+        overallStartTime = frameStartTime;
+        hopEndTargetTime = overallStartTime + targetHopDuration;
+
+        // For the first hop only, also show the origin.
+        showStop(currentHopInfo.origin, tour.stopsGraphicsLayer, tour.tourConfig);
       }
 
+      var framesRemainingInHop = (hopEndTargetTime - frameStartTime)/averageFramePeriod,
+          forceCompleteOnThisFrame = framesRemainingInHop < 0.5;
+
       // Get as much line as we need for as far through this hop's animation as we are
-      var hopProgress = Math.min(1, (timeStamp - start) / (tour.hopAnimationDuration * 1000)),
+      var hopTimeRemaining = hopEndTargetTime - frameStartTime;
+      var uncorrectedHopProgress = 1-(hopTimeRemaining / targetHopDuration),
+          hopProgress = forceCompleteOnThisFrame ? 1 : Math.min(1, uncorrectedHopProgress),
           subLine = getSubline(currentHopInfo.geodesicLine, hopProgress);
 
       // Update the map. We need to create a new Graphic. Just updating the geometry doesn't do it.
@@ -404,8 +420,8 @@ function (GraphicsLayer,
         showStop(currentHopInfo.destination, tour.stopsGraphicsLayer, tour.tourConfig);
 
         // Move on to the next hop and reset the timing info
-        currentIndex += 1;
-        start = undefined;
+        currentIndex++;
+        hopEndTargetTime = performance.now() + targetHopDuration;
 
         deferred.progress({
           currentHop: currentIndex,
@@ -413,10 +429,16 @@ function (GraphicsLayer,
         });
       }
 
+      var frameEndTime = performance.now();
+      totalFrameTime += (frameEndTime - frameStartTime);
+      frameCount++;
+
       // Check if we're done. If we are, good, resolve the deferred and get outta here. Otherwise, repeat when the next animation opportunity comes up.
       if (currentIndex < tour.hops.length) {
         window.requestAnimationFrame(updateAnimation); 
       } else {
+        var overallEndTime = frameEndTime;
+        console.log("Total animation took " + (overallEndTime - overallStartTime)/1000 + " seconds (Average Frame Period: " + averageFramePeriod + "ms and Duration: " + averageFrameDuration + "ms)");
         deferred.resolve();
       }
     }
