@@ -124,7 +124,7 @@ Parameters can be passed into the tour constructor in a JSON object. The followi
 | `allowURLParameters` | Set this to `false` to prevent configuration being read from the URL. It can also be set to an array to whitelist only specific properties (e.g. `["duration", "autoStartDelay"]`). Defaults to `true` to allow all properties to be specified in the URL. |
 | `autoStart` | Whether to start the tour automatically once the `MapView` or `SceneView` is ready. Default `false`. |
 | `autoStartDelay` | The delay in milliseconds before autostarting. Ignored if `autoStart` is not `true`. Default `0` (no delay). |
-| `duration` | Override the target duration of the entire animation in seconds (default 30s). This is an estimate but the component will try to meet the target. |
+| `duration` | Override the target duration of the entire animation in seconds (default 30s). |
 | `stopLayerURL`    | The URL to a public Feature Service Layer containing points to tour between. See [Creating Data](#creating-data). |
 | `stopNameField`     | Override the field to use for reading the point's name to display on the map (default `Name`). |
 | `stopSequenceField` | Override the field to use for reading the point's sequence in the tour (default `Sequence`). |
