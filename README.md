@@ -1,12 +1,12 @@
-# Tour Map
+# GeoTour JS
 
 This component takes a feature service of stops and animates great circle lines between them using the 4.0 ArcGIS API for JavaScript in either a 2D [`MapView`](https://developers.arcgis.com/javascript/latest/api-reference/esri-views-MapView.html) or a 3D [`SceneView`](https://developers.arcgis.com/javascript/latest/api-reference/esri-views-SceneView.html).
 
-See a live version [here](https://nixta.github.io/tourmap/).
+See a live version [here](https://nixta.github.io/geotour-js/).
 
 All it requires is a feature service with integer `Sequence` and string `Name` fields where records are to be visited in ascending `Sequence` order.
 
-![TourMap](./tourmap.gif)
+![GeoTour](./geotour.gif)
 
 ## Features
 
@@ -22,8 +22,8 @@ Include the component by modifying `dojoConfig` before including the JS API (see
 <script type="text/javascript">
 var dojoConfig = {
   packages: [{
-    name: "tour-map",
-    location: 'https://nixta.github.io/tourmap/src/js'
+    name: "geotour",
+    location: 'https://nixta.github.io/geotour-js/src/js'
   }]
 };
 </script>
@@ -36,7 +36,7 @@ require([
   "esri/Map",
   "esri/views/MapView",
   "esri/layers/TileLayer",
-  "tour-map/tour",
+  "geotour/tour",
   "dojo/domReady!"
 ], function(Map, MapView, TileLayer, Tour) {
 
@@ -151,10 +151,10 @@ Here are some ways to create a suitable stop service:
 ## Samples
 The following samples are included in this repo:
 
-* 2D Sample with UI control (the UI is hidden while the animation progresses) [here](https://nixta.github.io/tourmap/samples/index2d.html) ([great circle version](https://nixta.github.io/tourmap/samples/index2d.html?forceGreatCircleArcs=true)).
-* 3D Sample with UI control [here](https://nixta.github.io/tourmap/samples/index3d.html) ([great circle version](https://nixta.github.io/tourmap/samples/index3d.html?forceGreatCircleArcs=true)).
-* Minimal 2D sample with property watching [here](https://nixta.github.io/tourmap/samples/simple.html) ([great circle version](https://nixta.github.io/tourmap/samples/simple.html?forceGreatCircleArcs=true)).
-* Minimal 2D auto-starting sample [here](https://nixta.github.io/tourmap/samples/simple-autostart.html) ([great circle version](https://nixta.github.io/tourmap/samples/simple-autostart.html?forceGreatCircleArcs=true)).
+* 2D Sample with UI control (the UI is hidden while the animation progresses) [here](https://nixta.github.io/geotour-js/samples/index2d.html) ([great circle version](https://nixta.github.io/geotour-js/samples/index2d.html?forceGreatCircleArcs=true)).
+* 3D Sample with UI control [here](https://nixta.github.io/geotour-js/samples/index3d.html) ([great circle version](https://nixta.github.io/geotour-js/samples/index3d.html?forceGreatCircleArcs=true)).
+* Minimal 2D sample with property watching [here](https://nixta.github.io/geotour-js/samples/simple.html) ([great circle version](https://nixta.github.io/geotour-js/samples/simple.html?forceGreatCircleArcs=true)).
+* Minimal 2D auto-starting sample [here](https://nixta.github.io/geotour-js/samples/simple-autostart.html) ([great circle version](https://nixta.github.io/geotour-js/samples/simple-autostart.html?forceGreatCircleArcs=true)).
 
 ## Advanced
 Use the following additional options only if you really understand what you're doing. You'll probably have to dig in and get to learn what the code and data are really getting up to behind your back.
@@ -178,7 +178,7 @@ The [Usage](#usage) section above shows a fixed location for the component. But 
 var package_path = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
 var dojoConfig = {
   packages: [{
-    name: "tour-map",
+    name: "geotour",
     location: package_path + '/src/js'
   }]
 };

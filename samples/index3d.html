@@ -39,7 +39,7 @@
 var package_path = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
 var dojoConfig = {
   packages: [{
-    name: "tour-map",
+    name: "geotour",
     location: package_path + '/../src/js'
   }]
 };
@@ -53,7 +53,7 @@ require([
   "esri/Map",
   "esri/views/SceneView",
   "esri/layers/TileLayer",
-  "tour-map/tour",
+  "geotour/tour",
   "esri/core/watchUtils",
   "dojo/domReady!"
 ], function(Map, SceneView, TileLayer, Tour, watchUtils) {

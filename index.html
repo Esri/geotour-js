@@ -36,21 +36,21 @@
 <script type="text/javascript">
 var dojoConfig = {
   packages: [{
-    name: "tour-map",
-    location: 'https://nixta.github.io/tourmap/src/js'
+    name: "geotour",
+    location: 'https://nixta.github.io/geotour-js/src/js'
   }]
 };
 </script>
 
 <script src="https://js.arcgis.com/4.0/"></script>
-<script src="https://nixta.github.io/tourmap/util/js/esri-view-ui-visibility.js"></script>
+<script src="https://nixta.github.io/geotour-js/util/js/esri-view-ui-visibility.js"></script>
 
 <script type="text/javascript">
 require([
   "esri/Map",
   "esri/views/MapView",
   "esri/layers/TileLayer",
-  "tour-map/tour",
+  "geotour/tour",
   "esri/core/watchUtils",
   "dojo/domReady!"
 ], function(Map, MapView, TileLayer, Tour, watchUtils) {
