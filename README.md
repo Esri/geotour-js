@@ -2,7 +2,7 @@
 
 This component takes a feature service of stops and animates great circle lines between them using the 4.0 ArcGIS API for JavaScript in either a 2D [`MapView`](https://developers.arcgis.com/javascript/latest/api-reference/esri-views-MapView.html) or a 3D [`SceneView`](https://developers.arcgis.com/javascript/latest/api-reference/esri-views-SceneView.html).
 
-See a live version [here](https://nixta.github.io/geotour-js/).
+See a live version [here](https://esri.github.io/geotour-js/).
 
 All it requires is a feature service with integer `Sequence` and string `Name` fields where records are to be visited in ascending `Sequence` order.
 
@@ -23,7 +23,7 @@ Include the component by modifying `dojoConfig` before including the JS API (see
 var dojoConfig = {
   packages: [{
     name: "geotour",
-    location: 'https://nixta.github.io/geotour-js/src/js'
+    location: 'https://esri.github.io/geotour-js/src/js'
   }]
 };
 </script>
@@ -145,16 +145,16 @@ Here are some ways to create a suitable stop service:
 
 * [Create a new Point Feature Layer](https://developers.arcgis.com/layers/#/new/) with `Name` and `Sequence` fields at [developers.arcgis.com](https://developers.arcgis.com) and add data in ArcGIS Online (use your existing ArcGIS Online account or a free Developer Account).
 * Upload a CSV file to ArcGIS Online. Be sure to include a `Name` and `Sequence` column and populate them appropriately. If the rows in the file have [suitable lat/lon or x/y fields](https://doc.arcgis.com/en/arcgis-online/reference/csv-gpx.htm#GUID-4EDCE12E-285E-41D0-A3B8-1BAB4B111922), this is free. Geocoding locations will consume credits.
-* [Create an empty Feature Layer](https://doc.arcgis.com/en/arcgis-online/share-maps/publish-features.htm#ESRI_SECTION1_809F1266856546EF9E6D2CEF3816FD7D) from an [existing service URL](http://services.arcgis.com/OfH668nDRN7tbJh0/arcgis/rest/services/GlobalTourDemo1/FeatureServer/0) and populate the data in ArcGIS Online.
+* [Create an empty Feature Layer](https://doc.arcgis.com/en/arcgis-online/share-maps/publish-features.htm#ESRI_SECTION1_809F1266856546EF9E6D2CEF3816FD7D) from an [existing service URL](https://services.arcgis.com/OfH668nDRN7tbJh0/arcgis/rest/services/GlobalTourDemo1/FeatureServer/0) and populate the data in ArcGIS Online.
 * Publish a layer to ArcGIS Online from ArcGIS Desktop.
 
 ## Samples
 The following samples are included in this repo:
 
-* 2D Sample with UI control (the UI is hidden while the animation progresses) [here](https://nixta.github.io/geotour-js/samples/index2d.html) ([great circle version](https://nixta.github.io/geotour-js/samples/index2d.html?forceGreatCircleArcs=true)).
-* 3D Sample with UI control [here](https://nixta.github.io/geotour-js/samples/index3d.html) ([great circle version](https://nixta.github.io/geotour-js/samples/index3d.html?forceGreatCircleArcs=true)).
-* Minimal 2D sample with property watching [here](https://nixta.github.io/geotour-js/samples/simple.html) ([great circle version](https://nixta.github.io/geotour-js/samples/simple.html?forceGreatCircleArcs=true)).
-* Minimal 2D auto-starting sample [here](https://nixta.github.io/geotour-js/samples/simple-autostart.html) ([great circle version](https://nixta.github.io/geotour-js/samples/simple-autostart.html?forceGreatCircleArcs=true)).
+* 2D Sample with UI control (the UI is hidden while the animation progresses) [here](https://esri.github.io/geotour-js/samples/index2d.html) ([great circle version](https://esri.github.io/geotour-js/samples/index2d.html?forceGreatCircleArcs=true)).
+* 3D Sample with UI control [here](https://esri.github.io/geotour-js/samples/index3d.html) ([great circle version](https://esri.github.io/geotour-js/samples/index3d.html?forceGreatCircleArcs=true)).
+* Minimal 2D sample with property watching [here](https://esri.github.io/geotour-js/samples/simple.html) ([great circle version](https://esri.github.io/geotour-js/samples/simple.html?forceGreatCircleArcs=true)).
+* Minimal 2D auto-starting sample [here](https://esri.github.io/geotour-js/samples/simple-autostart.html) ([great circle version](https://esri.github.io/geotour-js/samples/simple-autostart.html?forceGreatCircleArcs=true)).
 
 ## Advanced
 Use the following additional options only if you really understand what you're doing. You'll probably have to dig in and get to learn what the code and data are really getting up to behind your back.
