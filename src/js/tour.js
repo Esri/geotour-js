@@ -625,9 +625,14 @@ function (GraphicsLayer,
       forceGreatCircleArcs: {
         path: "useActualRoute",
         urlValid: true,
-        mapFunc: function(useArcs) {
-          return !mapBool(useArcs);
-        }
+        mapFunc: function(useArcsParamString) {
+          var forceArcs = mapBool(useArcsParamString);
+          if (forceArcs === undefined) {
+            forceArcs = false;
+          }
+          return !forceArcs;
+        },
+        defaultValue: true
       },
 
       tourSymbol: { 
@@ -706,8 +711,12 @@ function (GraphicsLayer,
           paramInfo.value = paramVal;
         }
       } else {
-        // If no valid value was read, discard the parameter.
-        delete validParams[paramName];
+        if (paramInfo.hasOwnProperty("defaultValue")) {
+          paramInfo.value = paramInfo.defaultValue;
+        } else {
+          // If no valid value was read, discard the parameter.
+          delete validParams[paramName];
+        }
       }
     }
 
@@ -721,7 +730,7 @@ function (GraphicsLayer,
         path: "data.stopLayerURL", 
         value: validParams.routeResultServiceURL.value + "/" + mergedConfig.data.stopLayerID
       };
-      if (validParams.forceGreatCircleArcs && validParams.forceGreatCircleArcs.value === false) {
+      if (!(validParams.hasOwnProperty("forceGreatCircleArcs") && validParams.forceGreatCircleArcs.value === false)) {
         validParams.trackServiceURL = {
           path: "data.trackServiceURL", 
           value: validParams.routeResultServiceURL.value + "/" + mergedConfig.data.trackLayerID
@@ -730,6 +739,10 @@ function (GraphicsLayer,
       // Ignore some other parameters
       delete validParams.stopNameField;
       delete validParams.stopSequenceField;
+    } else {
+      if (validParams.forceGreatCircleArcs && validParams.forceGreatCircleArcs.vallue == false) {
+        validParams.forceGreatCircleArcs.value = true;
+      }
     }
 
     // Now merge the parameters we have left, wherever we read them from, into the default
