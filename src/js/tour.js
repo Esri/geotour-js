@@ -341,6 +341,7 @@ function (GraphicsLayer,
       }
 
       if (pointID > lastPointID + 1) {
+        // A break in the sequence numbers means we've just reached a stop.
         if (currentHop.length > 0) {
           // Finish a hop
           var hopGeom = new Polyline( { 
@@ -353,16 +354,47 @@ function (GraphicsLayer,
         currentHop = [];
       }
 
-      if (onHop) {
-        currentHop.push(graphic.geometry.paths);
-      }
-
+      currentHop.push(graphic.geometry.paths);
       lastPointID = pointID;
     }
 
     return trackHops;
   }
 
+  function getLegacyHopGeometries(allRouteGraphics) {
+    // Build an array of "Hops". The route consists of "Stops", and "Hops" between them.
+    // A "Hop" is a sequence of coordinates that make up the path between one stop and another.
+    var trackHops = [],
+        currentHop = [],
+        onHop = false,
+        firstGeom;
+
+    for (var i=0; i<allRouteGraphics.length; i++) {
+      var graphic = allRouteGraphics[i];
+      if (!firstGeom) {
+        firstGeom = graphic.geometry;
+      }
+
+      if (!onHop && graphic.geometry !== null) {
+        // Start a new hop
+        currentHop = [];
+        onHop = true;
+      } else if (onHop && graphic.geometry === null) {
+        // Finish a hop
+        var hopGeom = new Polyline( { 
+          paths: currentHop.reduce(function (a,b) { return a.concat(b); }),
+          spatialReference: firstGeom.spatialReference } );
+        trackHops.push(hopGeom);
+        onHop = false;
+      }
+
+      if (onHop) {
+        currentHop.push(graphic.geometry.paths);
+      }
+    }
+
+    return trackHops;
+  }
 
 
 
