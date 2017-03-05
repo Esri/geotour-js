@@ -191,7 +191,7 @@ var dojoConfig = {
 
 ## Resources
 
-* [ArcGIS API for JavaScript](https://developers.arcgis.com/javascript/)
+* [ArcGIS Online Directions](http://doc.arcgis.com/en/arcgis-online/get-started/get-directions.htm)
 
 ## Issues
 
