@@ -26,6 +26,9 @@ function (GraphicsLayer,
 {
   var demoRouteServiceURL = "https://services.arcgis.com/OfH668nDRN7tbJh0/arcgis/rest/services/Oakland_to_Gloucester/FeatureServer";
 
+  ///
+  /// Top level Tour class
+  ///
   var tourClass = Accessor.createSubclass({
     properties: {
       ready: false,
@@ -33,6 +36,50 @@ function (GraphicsLayer,
       loadError: undefined
     },
     constructor: function(mapViewOrConfig) {
+      // Parse the input
+      this._initViewAndConfig(mapViewOrConfig);
+
+      // Inialize working data
+      this.hops = [];
+
+      // Initilize animation layers
+      this._initMapLayers();
+
+      // Initialize the animation
+      this._initAnimation();
+
+      // Load the tour data ready to animate.
+      this._initTour();
+    },
+    animate: function() {
+      return _animateTour(this);
+    },
+    animateWithDelay: function(delay) {
+      return _animateTour(this, delay || 500);
+    },
+    clearDisplay: function() {
+      _clearTourGraphics(this);
+    },
+    _initTour: function() {
+      if (this.tourConfig.spatialReference) {
+        // User can override the spatialReference directly, so we don't have
+        // to wait for the view to read it.
+          _loadTour(this);
+      } else {
+        // Otherwise, wait for the view to load so we can use its Spatial Reference.
+        watchUtils.whenTrueOnce(this.view, "ready", function() {
+          this.tourConfig.spatialReference = this.view.spatialReference;
+          try {
+            _loadTour(this);
+          } catch (err) {
+            console.error(err);
+            this.loadError = err;
+            return;
+          }
+        }.bind(this));
+      }
+    },
+    _initViewAndConfig: function(mapViewOrConfig) {
       // Can either pass in a MapView/SceneView and a boolean/integer,
       // Or an object with at least a "view" property.
       var mapView, config = {};
@@ -55,10 +102,8 @@ function (GraphicsLayer,
       } else {
         throw "You must pass a MapView, SceneView, or JSON Configuration Object as the first parameter!";
       }
-
-      this.hops = [];
-
-      // Set up some layers to show the animation
+    },
+    _initMapLayers: function() {
       this.hopsGraphicsLayer = new GraphicsLayer({
         renderer: new SimpleRenderer({
           symbol: this.tourConfig.symbols.tour
@@ -70,27 +115,10 @@ function (GraphicsLayer,
           symbol: this.tourConfig.symbols.stops
         })
       });
-
+    },
+    _initAnimation: function() {
       // Calculate how long each hop should animate.
       this.hopAnimationDuration = this.tourConfig.animation.duration / (Math.max(1, this.hops.length));
-
-      if (this.tourConfig.spatialReference) {
-        // User can override the spatialReference directly, so we don't have
-        // to wait for the view to read it.
-          loadTour(this);
-      } else {
-        // Otherwise, wait for the view to load so we can use its Spatial Reference.
-        watchUtils.whenTrueOnce(this.view, "ready", function() {
-          this.tourConfig.spatialReference = this.view.spatialReference;
-          try {
-            loadTour(this);
-          } catch (err) {
-            console.error(err);
-            this.loadError = err;
-            return;
-          }
-        }.bind(this));
-      }
 
       if (this.tourConfig.autoStart) {
         // One we're ready and the view has stopped updating, animate.
@@ -100,33 +128,46 @@ function (GraphicsLayer,
           }.bind(this));
         }.bind(this));
       }
-    },
-    animate: function() {
-      return animateTour(this);
-    },
-    animateWithDelay: function(delay) {
-      return animateTour(this, delay || 500);
-    },
-    clearDisplay: function() {
-      clearTourGraphics(this);
     }
   });
 
   return tourClass;
 
 
-  /// TOUR DATA LOADING
-  function loadTour(tour) {
+
+
+  ///
+  /// LOAD THE TOUR DATA
+  ///
+  function _loadTour(tour) {
     // Make sure we're cleared up
     tour.ready = false;
     tour.extent = undefined;
     tour.loadError = undefined;
 
-    var queryPromises = getQueryPromises(tour.tourConfig);
-    handleQueryPromises(tour, queryPromises);
+    all(_getTourQueries(tour.tourConfig)).then(function(results) {
+      // When stops and directions (if appropriate) have been loaded, parse the data and get ready to animate.
+      _parseTour(tour, results);
+
+      // OK. We're ready to animate.
+      tour.ready = true;
+    }, function (err) {
+      console.error("Something went wrong querying the stops or routes services. Check your URL parameters.\n\nMore details in the browser console.");
+      console.error(err);
+
+      tour.loadError = err;
+    });
   }
 
-  function getQueryPromises(config) {
+
+
+
+  ///
+  /// DATA QUERY LOGIC
+  ///
+  function _getTourQueries(config) {
+    // Return a set of promises on queries to load the data for the current configuration parameters
+
     // Validate some stuff
     if (!config.data.stopLayerURL) {
       throw "Cannot read stops! stopLayerURL = " + config.data.stopLayerURL;
@@ -137,7 +178,7 @@ function (GraphicsLayer,
       url: config.data.stopLayerURL
     });
 
-    // Make sure we get back the attributes we need, and order appropriately
+    // Make sure we get back the attributes we need, and order by stop sequence
     var stopQuery = new Query({
       returnGeometry: true,
       outFields: [config.data.stopNameField, config.data.stopSequenceField],
@@ -169,43 +210,33 @@ function (GraphicsLayer,
     return promises;
   }
 
-  function handleQueryPromises(tour, queryPromises) {
-    // When stops and directions (if appropriate) have been loaded, parse the data and get ready to animate.
-    all(queryPromises).then(function(results) {
-      var stopFeatures = results[0].features;
+  function _parseTour(tour, results) {
+    // Parse the query responses 
+    var stopFeatures = results[0].features;
 
-      if (!validateStops(stopFeatures, tour.tourConfig)) {
-        tour.loadError = "Error processing data from query results. Check browser console for more information.";
-        return;
-      }
+    if (!validateStops(stopFeatures, tour.tourConfig)) {
+      tour.loadError = "Error processing data from query results. Check browser console for more information.";
+      return;
+    }
 
-      var trackGeoms = results.length > 1 ? getTrackGeoms(results[1].features) : undefined;
+    var hopGeometries = results.length > 1 ? getHopGeometries(results[1].features) : undefined;
 
-      // Parse the data, and prepare the data for animation
-      tour.hops = parseHops(tour, stopFeatures, trackGeoms);
+    // Parse the data, and prepare the data for animation
+    tour.hops = parseHops(tour, stopFeatures, hopGeometries);
 
-      // How long should each hop take?
-      tour.hopAnimationDuration = tour.tourConfig.animation.duration / (Math.max(1, tour.hops.length));
+    // How long should each hop take?
+    tour.hopAnimationDuration = tour.tourConfig.animation.duration / (Math.max(1, tour.hops.length));
 
-      // Where is the tour?
-      tour.extent = geometryEngine.union(tour.hops.map(function(hop) {
-        return hop.line.extent;
-      })).extent;
+    // Where is the tour?
+    tour.extent = geometryEngine.union(tour.hops.map(function(hop) {
+      return hop.line.extent;
+    })).extent;
 
-      // Add layers to display the tour.
-      tour.view.map.addMany([
-        tour.hopsGraphicsLayer,
-        tour.stopsGraphicsLayer
-      ]);
-
-      // OK. We're ready to animate.
-      tour.ready = true;
-    }, function (err) {
-      console.error("Something went wrong querying the stops or routes services. Check your URL parameters.\n\nMore details in the browser console.");
-      console.error(err);
-
-      tour.loadError = err;
-    });
+    // Add layers to display the tour.
+    tour.view.map.addMany([
+      tour.hopsGraphicsLayer,
+      tour.stopsGraphicsLayer
+    ]);
   }
 
   function validateStops(stopFeatures, config) {
@@ -232,8 +263,69 @@ function (GraphicsLayer,
 
 
 
-  /// TOUR DATA PARSING
-  function getTrackGeoms(allRouteGraphics) {
+  ///
+  /// PARSE TOUR DATA
+  ///
+  function parseHops(tour, stopFeatures, hopGeometries) {
+    // Stop and Track Parsing
+    var hops = [];
+    var hopCount = Math.max(stopFeatures.length-1, 1);
+    var hopAnimationDuration = tour.tourConfig.animation.duration / hopCount,
+        framesPerHop = hopAnimationDuration * tour.tourConfig.animation.maxFPS;
+
+    var labelConfig = tour.tourConfig.labelPositions;
+
+    var previousStop = undefined;
+    for (var i=0; i < stopFeatures.length; i++) {
+      var stop = stopFeatures[i];
+
+      var stopSequence = stop.attributes.Sequence,
+          yOffset = (labelConfig.offsetBelow.indexOf(stopSequence) > -1) ? -14 : 7,
+          alignment = (labelConfig.leftAlign.indexOf(stopSequence) > -1) ? "left" : 
+                        ((labelConfig.rightAlign.indexOf(stopSequence) > -1) ? "right" : "center");
+
+      stop.attributes["__label_yOffset"] = yOffset;
+      stop.attributes["__label_alignment"] = alignment;
+
+      if (previousStop !== undefined) {
+        var prevPoint = previousStop.geometry,
+            currPoint = stop.geometry;
+
+        var hopLine, geodesicHopLine;
+
+        if (tour.tourConfig.useActualRoute) {
+          hopLine = hopGeometries[i-1];
+          geodesicHopLine = hopLine;
+        } else {
+          hopLine = new Polyline({
+            paths: [[prevPoint.x, prevPoint.y], [currPoint.x, currPoint.y]],
+            spatialReference: tour.view.spatialReference
+          });
+          
+          var hopLength = geometryEngine.geodesicLength(hopLine, "miles"),
+              densifyLength = hopLength / framesPerHop;
+
+          geodesicHopLine = geometryEngine.geodesicDensify(hopLine, densifyLength, "miles");
+        }
+
+        var newHop = {
+          origin: previousStop,
+          destination: stop,
+          line: hopLine,
+          geodesicLine: geodesicHopLine
+        };
+        hops.push(newHop);
+      }
+
+      previousStop = stop;
+    }
+
+    return hops;
+  }
+
+  function getHopGeometries(allRouteGraphics) {
+    // Build an array of "Hops". The route consists of "Stops", and "Hops" between them.
+    // A "Hop" is a sequence of coordinates that make up the path between one stop and another.
     var trackHops = [],
         currentHop = [],
         onHop = false,
@@ -266,66 +358,14 @@ function (GraphicsLayer,
     return trackHops;
   }
 
-  /// Stop and Track Parsing
-  function parseHops(tour, stopFeatures, trackFeatures) {
-    var hops = [];
-    var hopCount = Math.max(stopFeatures.length-1, 1);
-    var hopAnimationDuration = tour.tourConfig.animation.duration / hopCount,
-        framesPerHop = hopAnimationDuration * tour.tourConfig.animation.maxFPS;
-
-    var labelConfig = tour.tourConfig.labelPositions;
-
-    var previousStop = undefined;
-    for (var i=0; i < stopFeatures.length; i++) {
-      var stop = stopFeatures[i];
-
-      var stopSequence = stop.attributes.Sequence,
-          yOffset = (labelConfig.offsetBelow.indexOf(stopSequence) > -1) ? -14 : 7,
-          alignment = (labelConfig.leftAlign.indexOf(stopSequence) > -1) ? "left" : 
-                        ((labelConfig.rightAlign.indexOf(stopSequence) > -1) ? "right" : "center");
-
-      stop.attributes["__label_yOffset"] = yOffset;
-      stop.attributes["__label_alignment"] = alignment;
-
-      if (previousStop !== undefined) {
-        var prevPoint = previousStop.geometry,
-            currPoint = stop.geometry;
-
-        var hopLine, geodesicHopLine;
-
-        if (tour.tourConfig.useActualRoute) {
-          hopLine = trackFeatures[i-1];
-          geodesicHopLine = hopLine;
-        } else {
-          hopLine = new Polyline({
-            paths: [[prevPoint.x, prevPoint.y], [currPoint.x, currPoint.y]],
-            spatialReference: tour.view.spatialReference
-          });
-          
-          var hopLength = geometryEngine.geodesicLength(hopLine, "miles"),
-              densifyLength = hopLength / framesPerHop;
-
-          geodesicHopLine = geometryEngine.geodesicDensify(hopLine, densifyLength, "miles");
-        }
-
-        var newHop = {
-          origin: previousStop,
-          destination: stop,
-          line: hopLine,
-          geodesicLine: geodesicHopLine
-        };
-        hops.push(newHop);
-      }
-
-      previousStop = stop;
-    }
-
-    return hops;
-  }
 
 
+
+
+  ///
   /// TOUR ANIMATION
-  function animateTour(tour, delay) {
+  ///
+  function _animateTour(tour, delay) {
     var deferred = new Deferred();
 
     // Clear any existing routes
@@ -445,8 +485,12 @@ function (GraphicsLayer,
   }
 
 
+
+
+  ///
   /// TOUR ANIMATION VISUALISATION
-  function clearTourGraphics(tour) {
+  ///
+  function _clearTourGraphics(tour) {
     tour.hopsGraphicsLayer.removeAll();
     tour.stopsGraphicsLayer.removeAll();
   }
@@ -482,7 +526,11 @@ function (GraphicsLayer,
   }
 
 
-  /// Polyline clipping
+
+
+  ///
+  /// POLYLINE CLIPPING
+  ///
   function getSubline(sourceLine, portionToReturn) {
     // We'll do all the maths in planar coordinates (i.e. any geodesic work has aleady been done).
     // We also assume we're dealing with Web Mercator and so distances are in meters.
@@ -543,7 +591,11 @@ function (GraphicsLayer,
   }
 
 
+
+
+  ///
   /// TOUR CONFIGURATION
+  ///
   function getDefaultConfig() {
     return {
       useActualRoute: undefined,
@@ -588,7 +640,9 @@ function (GraphicsLayer,
     };
   }
 
-  function getValidParams() {
+  function getUrlParameterMappingForValidParams() {
+    // The JSON Config object has a hierarchical structure.
+    // This determines how the URL parameters should be read into that structure.
     return {
       autoStart: { 
         path: "autoStart", 
@@ -650,36 +704,11 @@ function (GraphicsLayer,
     };
   }
 
-  function mapBool(strBool) {
-    if (typeof strBool === "string") {
-      return strBool == "true" ? true : (strBool == "false" ? false : undefined);
-    } else if (typeof strBool === "boolean") {
-      return strBool;
-    }
-    return undefined;
-  }
-
-  function mapInt(strInt) {
-    var parsed = parseInt(strInt);
-    if (!isNaN(parsed) && parsed > 0) {
-      return parsed;
-    }
-    return undefined;
-  }
-
-  function mapFloat(strFloat) {
-    var parsed = parseFloat(strFloat);
-    if (!isNaN(parsed) && parsed > 0) {
-      return parsed;
-    }
-    return undefined;
-  }
-
   function readConfig(config) {
     // These are parameters that can be set. Those with urlValid can also be set via the Query String.
     // If allowURLParameter == false, no parameters can be passed via the URL.
     // Identical parameters passed via the constructor and via the URL are read from the constructor.
-    var validParams = getValidParams();
+    var validParams = getUrlParameterMappingForValidParams();
 
     // Have we disallowed URL parameters?
     var allowURLParameters = (typeof config.allowURLParameters === "boolean") ? config.allowURLParameters : true;
@@ -783,6 +812,32 @@ function (GraphicsLayer,
         rightAlign: [8,16,17,18,19,21,28,30,34,35,36,37,39,40,43]
       }
     }
+  }
+
+  /// SAFELY PARSE URL STRING PARAMETERS
+  function mapBool(strBool) {
+    if (typeof strBool === "string") {
+      return strBool == "true" ? true : (strBool == "false" ? false : undefined);
+    } else if (typeof strBool === "boolean") {
+      return strBool;
+    }
+    return undefined;
+  }
+
+  function mapInt(strInt) {
+    var parsed = parseInt(strInt);
+    if (!isNaN(parsed) && parsed > 0) {
+      return parsed;
+    }
+    return undefined;
+  }
+
+  function mapFloat(strFloat) {
+    var parsed = parseFloat(strFloat);
+    if (!isNaN(parsed) && parsed > 0) {
+      return parsed;
+    }
+    return undefined;
   }
 
   function getParameterByName(name) {
