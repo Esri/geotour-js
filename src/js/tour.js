@@ -53,7 +53,7 @@ function (GraphicsLayer,
       if (typeof config === "object") {
         this.tourConfig = readConfig(config);
       } else {
-        throw "You must pass a MapView, SceneView, of JSON Configuration Object as the first parameter!";
+        throw "You must pass a MapView, SceneView, or JSON Configuration Object as the first parameter!";
       }
 
       this.hops = [];
