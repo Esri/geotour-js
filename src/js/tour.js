@@ -766,10 +766,6 @@ function (GraphicsLayer,
           path: "data.trackServiceURL", 
           value: validParams.routeResultServiceURL.value + "/" + mergedConfig.data.trackLayerID
         };
-        validParams.trackSequenceField = {
-          path: "data.trackSequenceField",
-          value: "DirectionPointID"
-        };
       }
       // Ignore some other parameters
       delete validParams.stopNameField;

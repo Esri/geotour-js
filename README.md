@@ -163,10 +163,20 @@ Use the following additional options only if you really understand what you're d
 
 | Parameter           | Value |
 | ------------------- | ----- |
-| `routeResultServiceURL` | A URL to a service created from an ArcGIS Online Directions calculation. If this is provided, `stopLayerURL`, `stopNameField` and `stopSequenceField` are ignored. The demo tour (no parameters) is the equivalent of just providing this parameter with [this sample service](https://services.arcgis.com/OfH668nDRN7tbJh0/arcgis/rest/services/Oakland_to_Gloucester/FeatureServer).<br><br>**NOTE**: At the time of writing (July 9, 2016), a bug in ArcGIS Online's Web Map Viewer means only relatively simple/short routes can be saved this way (a fix is coming). It's recommended you don't try this at home until that ArcGIS Online bug is fixed, at which point this README will get updated with instructions for creating one of these. |
+| `routeResultServiceURL` | A URL to a service created from an ArcGIS Online Directions calculation. If this is provided, `stopLayerURL`, `stopNameField` and `stopSequenceField` are ignored. The demo tour (no parameters) is the equivalent of just providing this parameter with [this sample service](https://services.arcgis.com/OfH668nDRN7tbJh0/arcgis/rest/services/Connected_States_Service/FeatureServer). See the **Creating a route service** section below for more details. |
 | `forceGreatCircleArcs` | Any value (but be a decent human being and use `true`) will force Great Circle lines to be drawn between stops in the case where detailed polylines are provided  with `routeResultServiceURL`. |
 
 Both these advanced parameters may be provided in the URL as well as in the `Tour` constructor and can be specified in the `allowURLParameters` array.
+
+### Creating a route service
+
+Using the ArcGIS Online Map Viewer, you can create a Route Service that represents a set of directions between a sequence of points to use with the `routeResultServiceURL` parameter. Follow these steps (this will consume credits to generate the route and store the resulting service).
+
+1. Calculate directions in the ArcGIS Map Viewer (if you have a Feature Service with up to 50 points, you can use that (see the [Tip at 3.c here](http://doc.arcgis.com/en/arcgis-online/get-started/get-directions.htm))).
+2. Click the **Save** icon to save the result (you can give it a name and choose a folder).
+3. Browse to the saved route's Portal Item page (there is a shortcut **SHARE THE ROUTE** link in the Directions panel once the route has been saved), and Publish it. This will create a new `Route layer (hosted)` item
+4. Share the `Route layer (hosted)` item with `Everyone`.
+5. Copy the `Route layer (hosted)` item's URL property from the right hand side of the Portal Item page. You can use this URL as the value for the `routeResultServiceURL` url parameter.
 
 ### Relative Paths in the dojoConfig
 The [Usage](#usage) section above shows a fixed location for the component. But since it's not recommended to rely on GitHub as a CDN like this, the following code sets up dojo to load the component relative to the HTML file:
