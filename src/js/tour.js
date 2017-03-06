@@ -24,7 +24,7 @@ function (GraphicsLayer,
   watchUtils, Accessor, View,
   all, Deferred, declare)
 {
-  var demoRouteServiceURL = "https://services.arcgis.com/OfH668nDRN7tbJh0/arcgis/rest/services/Oakland_to_Gloucester/FeatureServer";
+  var demoRouteServiceURL = "https://services.arcgis.com/OfH668nDRN7tbJh0/arcgis/rest/services/Connected_States_Service/FeatureServer";
 
   ///
   /// Top level Tour class
@@ -199,6 +199,7 @@ function (GraphicsLayer,
 
       var trackQuery = new Query({
         returnGeometry: true,
+        outFields: [config.data.trackSequenceField],
         where: "1=1",
         orderByFields: [config.data.trackSequenceField],
         outSpatialReference: config.spatialReference
@@ -219,7 +220,7 @@ function (GraphicsLayer,
       return;
     }
 
-    var hopGeometries = results.length > 1 ? getHopGeometries(results[1].features) : undefined;
+    var hopGeometries = results.length > 1 ? getHopGeometries(tour.tourConfig, results[1].features) : undefined;
 
     // Parse the data, and prepare the data for animation
     tour.hops = parseHops(tour, stopFeatures, hopGeometries);
@@ -323,41 +324,42 @@ function (GraphicsLayer,
     return hops;
   }
 
-  function getHopGeometries(allRouteGraphics) {
+  function getHopGeometries(config, allRouteGraphics) {
     // Build an array of "Hops". The route consists of "Stops", and "Hops" between them.
     // A "Hop" is a sequence of coordinates that make up the path between one stop and another.
     var trackHops = [],
         currentHop = [],
-        onHop = false,
-        firstGeom;
+        sr,
+        lastPointID = -1;
 
     for (var i=0; i<allRouteGraphics.length; i++) {
-      var graphic = allRouteGraphics[i];
-      if (!firstGeom) {
-        firstGeom = graphic.geometry;
+      var graphic = allRouteGraphics[i],
+          pointID = graphic.attributes[config.data.trackSequenceField];
+
+      if (!sr) {
+        sr = graphic.geometry.spatialReference;
       }
 
-      if (!onHop && graphic.geometry !== null) {
+      if (i == (allRouteGraphics.length-1) || pointID > lastPointID + 1) {
+        // A break in the sequence numbers means we've just reached a stop.
+        if (currentHop.length > 0) {
+          // Finish a hop
+          var hopGeom = new Polyline( { 
+            paths: currentHop.reduce(function (a,b) { return a.concat(b); }),
+            spatialReference: sr } );
+          trackHops.push(hopGeom);
+        }
+
         // Start a new hop
         currentHop = [];
-        onHop = true;
-      } else if (onHop && graphic.geometry === null) {
-        // Finish a hop
-        var hopGeom = new Polyline( { 
-          paths: currentHop.reduce(function (a,b) { return a.concat(b); }),
-          spatialReference: firstGeom.spatialReference } );
-        trackHops.push(hopGeom);
-        onHop = false;
       }
 
-      if (onHop) {
-        currentHop.push(graphic.geometry.paths);
-      }
+      currentHop.push(graphic.geometry.paths);
+      lastPointID = pointID;
     }
 
     return trackHops;
   }
-
 
 
 
@@ -609,7 +611,7 @@ function (GraphicsLayer,
         stopSequenceField: "Sequence",
         trackServiceURL: null,
         trackLayerID: 3,
-        trackSequenceField: "Sequence"
+        trackSequenceField: "DirectionPointID"
       },
       animation: {
         duration: 30.0,
@@ -673,7 +675,7 @@ function (GraphicsLayer,
       },
 
       routeResultServiceURL: {
-        path: "",
+        path: "routeResultServiceURL",
         urlValid: true
       },
       forceGreatCircleArcs: {
