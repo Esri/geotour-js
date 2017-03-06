@@ -163,7 +163,7 @@ Use the following additional options only if you really understand what you're d
 
 | Parameter           | Value |
 | ------------------- | ----- |
-| `routeResultServiceURL` | A URL to a service created from an ArcGIS Online Directions calculation. If this is provided, `stopLayerURL`, `stopNameField` and `stopSequenceField` are ignored. The demo tour (no parameters) is the equivalent of just providing this parameter with [this sample service](https://services.arcgis.com/OfH668nDRN7tbJh0/arcgis/rest/services/Connected_States_Service/FeatureServer). See the **Creating a route service** section below for more details. |
+| `routeResultServiceURL` | A URL to a service created from an ArcGIS Online Directions calculation. If this is provided, `stopLayerURL`, `stopNameField` and `stopSequenceField` are ignored. The demo tour (no parameters) is the equivalent of just providing this parameter with [this sample service](https://services.arcgis.com/OfH668nDRN7tbJh0/arcgis/rest/services/Connected_States_Service/FeatureServer). See [Creating a route service](#creating-a-route-service) below for more details. |
 | `forceGreatCircleArcs` | Any value (but be a decent human being and use `true`) will force Great Circle lines to be drawn between stops in the case where detailed polylines are provided  with `routeResultServiceURL`. |
 
 Both these advanced parameters may be provided in the URL as well as in the `Tour` constructor and can be specified in the `allowURLParameters` array.
