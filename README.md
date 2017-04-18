@@ -227,6 +227,3 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 A copy of the license is available in the repository's [license.txt](https://github.com/Esri/calcite-maps/blob/master/license.txt) file.
-
-[](Esri Tags: Web Mapping ArcGIS JavaScript Animation 3D Tour)
-[](Esri Language: JavaScript)
