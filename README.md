@@ -119,21 +119,42 @@ A `Tour` instance has the following methods:
 
 Parameters can be passed into the tour constructor in a JSON object. The following parameters are supported:
 
-| Parameter           | Value |
-| ------------------- | ----- |
-| `allowURLParameters` | Set this to `false` to prevent configuration being read from the URL. It can also be set to an array to whitelist only specific properties (e.g. `["duration", "autoStartDelay"]`). Defaults to `true` to allow all properties to be specified in the URL. |
-| `autoStart` | Whether to start the tour automatically once the `MapView` or `SceneView` is ready. Default `false`. |
-| `autoStartDelay` | The delay in milliseconds before autostarting. Ignored if `autoStart` is not `true`. Default `0` (no delay). |
-| `duration` | Override the target duration of the entire animation in seconds (default 30s). |
-| `stopLayerURL`    | The URL to a public Feature Service Layer containing points to tour between. See [Creating Data](#creating-data). |
-| `stopNameField`     | Override the field to use for reading the point's name to display on the map (default `Name`). |
-| `stopSequenceField` | Override the field to use for reading the point's sequence in the tour (default `Sequence`). |
+| Parameter           | Value | Default |
+| ------------------- | ----- | ------- |
+| `allowURLParameters` | Set this to `false` to prevent configuration being read from the URL. It can also be set to an array to whitelist only specific properties (e.g. `["duration", "autoStartDelay"]`). Defaults to `true` to allow all properties to be specified in the URL. | `true` |
+| `autoStart` | Whether to start the tour automatically once the `MapView` or `SceneView` is ready. | `false` |
+| `autoStartDelay` | The delay in milliseconds before autostarting. Ignored if `autoStart` is not `true`. Default `0` (no delay). | `0` |
+| `duration` | Override the target duration of the entire animation in seconds. | `30` |
+| `forceGreatCircleArcs` | Any non-`false` value (but why not use `true`) will force Great Circle lines to be drawn between stops in the case where detailed polylines are provided through the default demo or with `routeResultServiceURL`. | `false` |
+| `routeResultServiceURL` | A URL to a service created from an ArcGIS Online Directions calculation. If this is provided, `stopLayerURL`, `stopNameField` and `stopSequenceField` are ignored. See [Creating a route service](#for-use-with-routeresultserviceurl-parameter) below for more details. If the parameter is not provided, a demo service is used. | [Default Demo](https://services.arcgis.com/OfH668nDRN7tbJh0/arcgis/rest/services/Connected_States_Service/FeatureServer) |
+| `stopLayerURL`    | The URL to a public Feature Service Layer containing points to tour between. See [Creating Data](#for-use-with-stoplayerurl-parameter). |
+| `stopNameField`     | Override the field to use for reading the point's name to display on the map. | `Name` |
+| `stopSequenceField` | Override the field to use for reading the point's sequence in the tour. | `Sequence` |
 
-These settings may also be read from the URL's Query String, but values passed to the constructor will take precedence.
+The above settings may also be read from the URL's Query String, but values passed to the API constructor will take precedence.
 
-All parameters are optional. If no parameters are provided, a demo dataset with a detailed real-world route is used (see the advanced `routeResultServiceURL` parameter). If a `stopLayerURL` is provided instead, the component will generate Great Circle Arcs between the stops.
+The following settings may also be provided to the API constructor:
 
-### Creating data
+| Parameter           | Value | Default |
+| ------------------- | ----- | ------- |
+| `tourSymbol` | A [SimpleLineSymbol](https://developers.arcgis.com/javascript/latest/api-reference/esri-symbols-SimpleLineSymbol.html) to be used for the tour line. | 3pt Red Line. |
+| `stopSymbol` | A [MarkerSymbol](https://developers.arcgis.com/javascript/latest/api-reference/esri-symbols-MarkerSymbol.html) subclass to be used for the tour stops. | 10px semi-transparent circle. |
+| `tourSymbol` | A [TextSymbol](https://developers.arcgis.com/javascript/latest/api-reference/esri-symbols-TextSymbol.html) to be used for the tour stop labels. | White 12pt sans-serif light. |
+| `labelPositions` | A JSON object with `offsetBelow`, `leftAlign` and `rightAlign` arrays. Each array contains the stop sequences (starting at 1) of items that should be affected by the array. For example, to ensure that the 1st, 5th and 7th labels are all right aligned and the 4th and 5th appear below the stop, use `labelPositions: { offsetBelow: [4,5], rightAlign: [1,5,7] }`. | Labels are horizontally centered above the stop. |
+
+All parameters are optional. If no parameters are provided, a demo dataset with a detailed real-world route is used (see the `routeResultServiceURL` parameter). If a `stopLayerURL` is provided instead, the component will generate Great Circle Arcs between the stops.
+
+## Samples
+Take a look at the following samples to see what GeoTour-JS can do for you:
+
+* 2D Sample with UI control (the UI is hidden while the animation progresses) [here](https://esri.github.io/geotour-js/samples/index2d.html) ([great circle version](https://esri.github.io/geotour-js/samples/index2d.html?forceGreatCircleArcs=true)).
+* 3D Sample with UI control [here](https://esri.github.io/geotour-js/samples/index3d.html) ([great circle version](https://esri.github.io/geotour-js/samples/index3d.html?forceGreatCircleArcs=true)).
+* Minimal 2D sample with property watching [here](https://esri.github.io/geotour-js/samples/simple.html) ([great circle version](https://esri.github.io/geotour-js/samples/simple.html?forceGreatCircleArcs=true)).
+* Minimal 2D auto-starting sample [here](https://esri.github.io/geotour-js/samples/simple-autostart.html) ([great circle version](https://esri.github.io/geotour-js/samples/simple-autostart.html?forceGreatCircleArcs=true)).
+* Custom WebMap with custom label symbology and `routeResultLayerURL` parameter [here](https://esri.github.io/geotour-js/samples/webmap-autostart.html) ([great circle version](https://esri.github.io/geotour-js/samples/webmap-autostart.html?forceGreatCircleArcs=true)).
+
+## Creating data
+### For use with stopLayerURL parameter
 There are many ways to create a Stop Service that you can pass to `stopLayerURL`. The key is to create a Feature Service Layer that meets the following criteria:
 
 * Has Point Geometry.
@@ -148,29 +169,11 @@ Here are some ways to create a suitable stop service:
 * [Create an empty Feature Layer](https://doc.arcgis.com/en/arcgis-online/share-maps/publish-features.htm#ESRI_SECTION1_809F1266856546EF9E6D2CEF3816FD7D) from an [existing service URL](https://services.arcgis.com/OfH668nDRN7tbJh0/arcgis/rest/services/GlobalTourDemo1/FeatureServer/0) and populate the data in ArcGIS Online.
 * Publish a layer to ArcGIS Online from ArcGIS Desktop.
 
-## Samples
-The following samples are included in this repo:
+### For use with routeResultServiceURL parameter
 
-* 2D Sample with UI control (the UI is hidden while the animation progresses) [here](https://esri.github.io/geotour-js/samples/index2d.html) ([great circle version](https://esri.github.io/geotour-js/samples/index2d.html?forceGreatCircleArcs=true)).
-* 3D Sample with UI control [here](https://esri.github.io/geotour-js/samples/index3d.html) ([great circle version](https://esri.github.io/geotour-js/samples/index3d.html?forceGreatCircleArcs=true)).
-* Minimal 2D sample with property watching [here](https://esri.github.io/geotour-js/samples/simple.html) ([great circle version](https://esri.github.io/geotour-js/samples/simple.html?forceGreatCircleArcs=true)).
-* Minimal 2D auto-starting sample [here](https://esri.github.io/geotour-js/samples/simple-autostart.html) ([great circle version](https://esri.github.io/geotour-js/samples/simple-autostart.html?forceGreatCircleArcs=true)).
+Using the ArcGIS Online Map Viewer, you can create a Route Service that represents a set of directions between a sequence of points to use with the `routeResultServiceURL` parameter.
 
-## Advanced
-Use the following additional options only if you really understand what you're doing. You'll probably have to dig in and get to learn what the code and data are really getting up to behind your back.
-
-### URL Parameters
-
-| Parameter           | Value |
-| ------------------- | ----- |
-| `routeResultServiceURL` | A URL to a service created from an ArcGIS Online Directions calculation. If this is provided, `stopLayerURL`, `stopNameField` and `stopSequenceField` are ignored. The demo tour (no parameters) is the equivalent of just providing this parameter with [this sample service](https://services.arcgis.com/OfH668nDRN7tbJh0/arcgis/rest/services/Connected_States_Service/FeatureServer). See [Creating a route service](#creating-a-route-service) below for more details. |
-| `forceGreatCircleArcs` | Any value (but be a decent human being and use `true`) will force Great Circle lines to be drawn between stops in the case where detailed polylines are provided  with `routeResultServiceURL`. |
-
-Both these advanced parameters may be provided in the URL as well as in the `Tour` constructor and can be specified in the `allowURLParameters` array.
-
-### Creating a route service
-
-Using the ArcGIS Online Map Viewer, you can create a Route Service that represents a set of directions between a sequence of points to use with the `routeResultServiceURL` parameter. Follow these steps (this will consume credits to generate the route and store the resulting service).
+Follow these steps (this will consume credits to generate the route and store the resulting service).
 
 1. Calculate directions in the ArcGIS Map Viewer (if you have a Feature Service with up to 50 points, you can use that (see the [Tip at 3.c here](http://doc.arcgis.com/en/arcgis-online/get-started/get-directions.htm))).
 2. Click the **Save** icon to save the result (you can give it a name and choose a folder).
@@ -178,7 +181,7 @@ Using the ArcGIS Online Map Viewer, you can create a Route Service that represen
 4. Share the `Route layer (hosted)` item with `Everyone`.
 5. Copy the `Route layer (hosted)` item's URL property from the right hand side of the Portal Item page. You can use this URL as the value for the `routeResultServiceURL` url parameter.
 
-### Relative Paths in the dojoConfig
+## Relative Paths in the dojoConfig
 The [Usage](#usage) section above shows a fixed location for the component. But since it's not recommended to rely on GitHub as a CDN like this, the following code sets up dojo to load the component relative to the HTML file:
 
 ``` HTML

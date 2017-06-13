@@ -281,9 +281,9 @@ function (GraphicsLayer,
       var stop = stopFeatures[i];
 
       var stopSequence = stop.attributes.Sequence,
-          yOffset = (labelConfig.offsetBelow.indexOf(stopSequence) > -1) ? -14 : 7,
-          alignment = (labelConfig.leftAlign.indexOf(stopSequence) > -1) ? "left" : 
-                        ((labelConfig.rightAlign.indexOf(stopSequence) > -1) ? "right" : "center");
+          yOffset = ((labelConfig.offsetBelow || []).indexOf(stopSequence) > -1) ? -14 : 7,
+          alignment = ((labelConfig.leftAlign || []).indexOf(stopSequence) > -1) ? "left" : 
+                        (((labelConfig.rightAlign || []).indexOf(stopSequence) > -1) ? "right" : "center");
 
       stop.attributes["__label_yOffset"] = yOffset;
       stop.attributes["__label_alignment"] = alignment;
@@ -506,22 +506,14 @@ function (GraphicsLayer,
     var yOffset = stop.attributes.__label_yOffset || 0;
     var alignment = stop.attributes.__label_alignment || "center";
 
+    var labelSymbol = config.symbols.labels.clone();
+    labelSymbol.text = stop.attributes[config.data.stopNameField];
+    labelSymbol.horizontalAlignment = alignment;
+    labelSymbol.yoffset = yOffset;
+
     var labelGraphic = new Graphic({
       geometry: stop.geometry,
-      symbol: new TextSymbol({
-        color: "white",
-        haloColor: "black",
-        haloSize: "3px",
-        text: stop.attributes[config.data.stopNameField],
-        xoffset: 0,
-        yoffset: yOffset,
-        horizontalAlignment: alignment,
-        font: {  // autocast as esri/symbols/Font
-          size: 12,
-          family: "sans-serif",
-          weight: "light"
-        }
-      })
+      symbol: labelSymbol
     });
 
     return labelGraphic;
@@ -630,6 +622,17 @@ function (GraphicsLayer,
             color: [153,153,153],
             width: 1.125  // points
           }
+        }),
+        labels: new TextSymbol({
+          color: "white",
+          haloColor: "black",
+          haloSize: "3px",
+          xoffset: 0,
+          font: {  // autocast as esri/symbols/Font
+            size: 12,
+            family: "sans-serif",
+            weight: "light"
+          }
         })
       },
       labelPositions: {
@@ -697,6 +700,10 @@ function (GraphicsLayer,
       },
       stopSymbol: { 
         path: "symbols.stops",
+        urlValid: false
+      },
+      labelSymbol: {
+        path: "symbols.labels",
         urlValid: false
       },
       labelPositions: { 

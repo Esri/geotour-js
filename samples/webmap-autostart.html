@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>Simple Map Tour with WebMap and AutoStart</title>
+
+  <link rel="stylesheet" href="https://js.arcgis.com/4.0/esri/css/main.css">
+
+  <style>
+    html,
+    body,
+    #viewDiv {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="viewDiv"></div>
+</body>
+
+<script type="text/javascript">
+  // The location.pathname.substring() logic below may look confusing but all its doing is
+  // enabling us to load the api from a CDN and load local modules from the correct location.
+  var package_path = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
+  var dojoConfig = {
+    packages: [{
+      name: "geotour",
+      location: package_path + '/../src/js'
+    }]
+  };
+</script>
+
+<script src="https://js.arcgis.com/4.0/"></script>
+
+<script type="text/javascript">
+  require([
+    "esri/WebMap",
+    "esri/views/MapView",
+    "esri/symbols/TextSymbol",
+    "geotour/tour",
+    "dojo/domReady!"
+  ], function (WebMap, MapView, TextSymbol, Tour) {
+
+    // Create the map.
+    var map = new WebMap({
+      portalItem: {
+        id: "c2b214d0044e4b25b77268aa80b34642"
+      }
+    });
+
+    // And the view.
+    var view = new MapView({
+      container: "viewDiv",
+      map: map
+    });
+
+    var tour = new Tour({
+      view: view,
+      autoStart: true,
+      autoStartDelay: 5000,
+      routeResultServiceURL: 'https://services.arcgis.com/OfH668nDRN7tbJh0/arcgis/rest/services/Vail_to_Upper_Missouri_River_Breaks_Distance_Opt_Test_Svc/FeatureServer',
+      labelSymbol: new TextSymbol({
+        color: "black",
+        haloColor: "white",
+        haloSize: "3px",
+        xoffset: 0,
+        font: { // autocast as esri/symbols/Font
+          size: 12,
+          family: "sans-serif",
+          weight: "light"
+        }
+      }),
+      labelPositions: {
+        offsetBelow: [2, 4, 7, 8, 11, 12, 14, 15, 19, 21],
+        leftAlign: [2, 3, 5, 8, 17, 19, 21],
+        rightAlign: [1, 9, 11, 12, 15, 16, 18]
+      }
+    });
+  });
+</script>
+</html>
