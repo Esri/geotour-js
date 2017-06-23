@@ -734,13 +734,14 @@ function (GraphicsLayer,
       });
     }
 
-    // Now read the parameters, from the constructor if possible, or else the URL if allowed.
+    // Now read the parameters, from the URL if allowed or else the constructor if possible.
     var paramNames = Object.getOwnPropertyNames(validParams);
     for (var i=0; i < paramNames.length; i++) {
       var paramName = paramNames[i],
           paramInfo = validParams[paramName],
-          paramVal = (config[paramName] !== undefined) ? config[paramName] : ((validURLParams.indexOf(paramName) > -1) ? getParameterByName(paramName) : undefined);
-      
+          paramFromURL = (validURLParams.indexOf(paramName) > -1) ? getParameterByName(paramName) : undefined,
+          paramVal = (paramFromURL !== undefined) ? paramFromURL : config[paramName];
+
       if (paramVal !== undefined) {
         // If a mapFunc is specified for the parameter, use that to transform the read parameter.
         if (typeof paramInfo.mapFunc === "function") {

@@ -131,9 +131,9 @@ Parameters can be passed into the tour constructor in a JSON object. The followi
 | `stopNameField`     | Override the field to use for reading the point's name to display on the map. | `Name` |
 | `stopSequenceField` | Override the field to use for reading the point's sequence in the tour. | `Sequence` |
 
-The above settings may also be read from the URL's Query String, but values passed to the API constructor will take precedence.
+The above parameters may also be read from the URL's Query String. Parameters passed to the URL will override parameters passed to the API constructor. To prevent the URL parameters overriding the constructor parameters, use `allowURLParameters` in the constructor.
 
-The following settings may also be provided to the API constructor:
+The following settings may also be provided to the API constructor only:
 
 | Parameter           | Value | Default |
 | ------------------- | ----- | ------- |
