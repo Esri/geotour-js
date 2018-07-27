@@ -752,6 +752,12 @@ function (GraphicsLayer,
       } else {
         if (paramInfo.hasOwnProperty("defaultValue")) {
           paramInfo.value = paramInfo.defaultValue;
+          if (typeof paramInfo.mapFunc === "function") {
+            // If there's a mapping function, let's use it.
+            // We don't just alter the defaultValue as it should (for clarity) be in the
+            // same value-range or value-set as any potential user input.
+            paramInfo.value = paramInfo.mapFunc(paramInfo.value);
+          }
         } else {
           // If no valid value was read, discard the parameter.
           delete validParams[paramName];
