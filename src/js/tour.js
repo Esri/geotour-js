@@ -544,7 +544,7 @@ function (GraphicsLayer,
         cumulativeLength += vertexGap;
 
         if (cumulativeLength == targetLength) {
-          // This'll probably happen IRL: if the length up to this vertex on the path happens to be
+          // This'll probably never happen IRL: if the length up to this vertex on the path happens to be
           // EXACTLY what we were looking for, then let's just gobble that up and stop.
           tailVertex = path[p+1];
           break;
